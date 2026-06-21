@@ -31,7 +31,7 @@
 - [Feature Walkthrough](#feature-walkthrough)
 - [Screenshots](#screenshots)
 - [Datasets](#datasets)
-- [Data Pipeline Notebooks](#data-pipeline-notebooks)
+- [ML Models & Data Pipeline](#ml-models--data-pipeline)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
