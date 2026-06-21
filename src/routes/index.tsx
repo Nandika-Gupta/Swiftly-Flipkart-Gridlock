@@ -354,21 +354,6 @@ function SwiftlyShell() {
         </div>
       </section>
 
-      {/* TRANSITION TO COMMAND CENTER */}
-      <section className="swf-section swf-transition">
-        <div className="swf-transition-inner">
-          <div className="swf-eyebrow"><span className="swf-eyebrow-line" /> MISSION CONTROL · ONLINE</div>
-          <h2 className="swf-transition-title">Ready to enter Bengaluru&apos;s Traffic Command Center?</h2>
-          <div className="swf-transition-feats">
-            <div><span className="swf-dot swf-dot-green" /> Live EVITAS</div>
-            <div><span className="swf-dot swf-dot-blue" /> Live Deployment</div>
-            <div><span className="swf-dot swf-dot-green" /> Real-Time Event Simulation</div>
-          </div>
-          <button className="swf-cta-primary swf-cta-xl" onClick={() => setEntered(true)}>
-            ENTER COMMAND CENTER <span className="swf-cta-arrow">→</span>
-          </button>
-        </div>
-      </section>
 
       <footer className="swf-footer">
         <div>SWIFTLY · Predict. Deploy. Divert. · Built for the Bengaluru Traffic Police</div>
@@ -872,20 +857,9 @@ const css = `
 .swf-rd-accent{background:linear-gradient(135deg,#4fd1ff,#ff8c42);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
 .swf-rd-l{margin-top:4px;font-size:10px;letter-spacing:1.6px;color:#94a8cd;font-weight:800;text-transform:uppercase}
 
-.swf-transition{padding:72px 22px}
-.swf-transition-inner{padding:56px 40px;border-radius:28px;border:1px solid rgba(79,209,255,.28);background:radial-gradient(circle at 20% 0%,rgba(255,140,66,.22),transparent 55%),radial-gradient(circle at 90% 100%,rgba(79,209,255,.22),transparent 55%),linear-gradient(180deg,rgba(17,28,45,.82),rgba(8,15,26,.72));text-align:center;position:relative;overflow:hidden}
-.swf-transition-inner::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(79,209,255,.06) 1px,transparent 1px),linear-gradient(90deg,rgba(79,209,255,.06) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(circle at center,#000 0%,transparent 75%);pointer-events:none}
-.swf-transition-inner>*{position:relative;z-index:1}
-.swf-transition-inner .swf-eyebrow{justify-content:center;color:#7bd8ff}
-.swf-transition-title{font-size:clamp(32px,4.4vw,56px);font-weight:850;letter-spacing:-.03em;margin:14px auto 22px;color:#fff;max-width:840px;line-height:1.08}
-.swf-transition-feats{display:flex;justify-content:center;gap:22px;flex-wrap:wrap;margin-bottom:28px;font-size:12px;color:#cad4e7;font-weight:700;letter-spacing:1px;text-transform:uppercase}
-.swf-transition-feats>div{display:inline-flex;align-items:center;gap:8px;padding:9px 14px;border-radius:999px;background:rgba(7,17,29,.5);border:1px solid rgba(176,187,218,.16)}
-.swf-cta-xl{padding:20px 36px;font-size:14px;letter-spacing:2.4px;box-shadow:0 24px 60px rgba(79,209,255,.28)}
-
 @media (max-width:900px){
   .swf-flow-arrow{transform:rotate(90deg);width:100%;justify-content:center}
   .swf-flow{flex-direction:column}
   .swf-realdata-strip{grid-template-columns:repeat(2,minmax(0,1fr))}
-  .swf-transition-inner{padding:40px 22px}
 }
 `;
