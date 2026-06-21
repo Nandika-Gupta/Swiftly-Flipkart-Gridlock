@@ -611,6 +611,22 @@ function CounterfactualEngine() {
     [corridors, corridorName],
   );
   const eventMeta = EVENT_TYPES.find((e) => e.key === eventType) ?? EVENT_TYPES[0];
+  const btp = useMemo(
+    () => btpStats.find((b) => b.corridor_name === corridorName),
+    [btpStats, corridorName],
+  );
+
+  // ── BTP historical vulnerability uplift (0–14 pts) ───────────────────────
+  // Blends accident frequency, incident density, congestion index and peak vulnerability.
+  const btpUplift = btp
+    ? Math.min(
+        14,
+        (btp.accidents_per_year / 220) * 4 +
+          (btp.incidents_per_year / 320) * 3.5 +
+          (btp.congestion_index / 100) * 3.5 +
+          (btp.peak_vulnerability / 100) * 3,
+      )
+    : 0;
 
   // ── EVITAS contribution model (transparent, explainable) ─────────────────
   const baseRisk = (corridor?.risk_score ?? 0.35) * 100 * 0.55; // corridor history baseline
@@ -618,7 +634,7 @@ function CounterfactualEngine() {
   const durationC = Math.min((duration / 6) * 12, 16);
   const closureC = (closurePct / 100) * 26 * eventMeta.weight;
   const officerMit = -Math.min(officers * 1.9, 28);
-  const rawEvitas = baseRisk + crowdC + durationC + closureC + officerMit;
+  const rawEvitas = baseRisk + btpUplift + crowdC + durationC + closureC + officerMit;
   const evitas = Math.max(0, Math.min(100, Math.round(rawEvitas * 10) / 10));
 
   const band: "green" | "yellow" | "orange" | "red" =
@@ -628,13 +644,16 @@ function CounterfactualEngine() {
   const recoveryMin = Math.round(
     duration * 60 * 0.35 + (closurePct / 100) * 55 + crowd / 700 - officers * 2.5,
   );
+  // BTP peak vulnerability and accident frequency bump manpower needs
+  const btpManpowerBump = btp ? (btp.peak_vulnerability / 100) * 1.6 + (btp.accidents_per_year / 250) : 0;
   const optimalOfficers = Math.max(
     2,
-    Math.ceil(crowd / 2200 + closurePct / 18 + eventMeta.weight * 2.2 + (corridor?.mean_severity ?? 1) * 1.5),
+    Math.ceil(crowd / 2200 + closurePct / 18 + eventMeta.weight * 2.2 + (corridor?.mean_severity ?? 1) * 1.5 + btpManpowerBump),
   );
   const barricades = Math.ceil(optimalOfficers / 3) + (closurePct >= 50 ? 2 : 0);
   const impactRadiusKm =
     Math.round((crowd / 5000 + closurePct / 28 + duration * 0.18) * 10) / 10;
+
 
   // ── Diversion: nearest 2 alternate corridors by lat/lon ──────────────────
   const diversion = useMemo(() => {
