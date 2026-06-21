@@ -704,6 +704,12 @@ function CounterfactualEngine() {
 
   return (
     <div className="swf-cf">
+      <div className="swf-cf-attrib">
+        <span className="swf-cf-attrib-dot" />
+        Source: <b>ASTraM Event Data + Bengaluru Traffic Police Statistics</b>
+        <span className="swf-cf-attrib-note">BTP stats used as historical risk factors — not real-time feeds.</span>
+      </div>
+
       {/* Controls */}
       <div className="swf-cf-controls">
         <div className="swf-cf-control">
