@@ -10,11 +10,41 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SwiftlyResponseRouteImport } from './routes/swiftly.response'
+import { Route as SwiftlyIntelligenceRouteImport } from './routes/swiftly.intelligence'
+import { Route as SwiftlyDeploymentRouteImport } from './routes/swiftly.deployment'
+import { Route as SwiftlyCorridorsRouteImport } from './routes/swiftly.corridors'
+import { Route as SwiftlyCopilotRouteImport } from './routes/swiftly.copilot'
 import { Route as ApiCopilotRouteImport } from './routes/api/copilot'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyResponseRoute = SwiftlyResponseRouteImport.update({
+  id: '/swiftly/response',
+  path: '/swiftly/response',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyIntelligenceRoute = SwiftlyIntelligenceRouteImport.update({
+  id: '/swiftly/intelligence',
+  path: '/swiftly/intelligence',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyDeploymentRoute = SwiftlyDeploymentRouteImport.update({
+  id: '/swiftly/deployment',
+  path: '/swiftly/deployment',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyCorridorsRoute = SwiftlyCorridorsRouteImport.update({
+  id: '/swiftly/corridors',
+  path: '/swiftly/corridors',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyCopilotRoute = SwiftlyCopilotRouteImport.update({
+  id: '/swiftly/copilot',
+  path: '/swiftly/copilot',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCopilotRoute = ApiCopilotRouteImport.update({
@@ -26,27 +56,69 @@ const ApiCopilotRoute = ApiCopilotRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/copilot': typeof SwiftlyCopilotRoute
+  '/swiftly/corridors': typeof SwiftlyCorridorsRoute
+  '/swiftly/deployment': typeof SwiftlyDeploymentRoute
+  '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
+  '/swiftly/response': typeof SwiftlyResponseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/copilot': typeof SwiftlyCopilotRoute
+  '/swiftly/corridors': typeof SwiftlyCorridorsRoute
+  '/swiftly/deployment': typeof SwiftlyDeploymentRoute
+  '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
+  '/swiftly/response': typeof SwiftlyResponseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/copilot': typeof SwiftlyCopilotRoute
+  '/swiftly/corridors': typeof SwiftlyCorridorsRoute
+  '/swiftly/deployment': typeof SwiftlyDeploymentRoute
+  '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
+  '/swiftly/response': typeof SwiftlyResponseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/copilot'
+  fullPaths:
+    | '/'
+    | '/api/copilot'
+    | '/swiftly/copilot'
+    | '/swiftly/corridors'
+    | '/swiftly/deployment'
+    | '/swiftly/intelligence'
+    | '/swiftly/response'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/copilot'
-  id: '__root__' | '/' | '/api/copilot'
+  to:
+    | '/'
+    | '/api/copilot'
+    | '/swiftly/copilot'
+    | '/swiftly/corridors'
+    | '/swiftly/deployment'
+    | '/swiftly/intelligence'
+    | '/swiftly/response'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/copilot'
+    | '/swiftly/copilot'
+    | '/swiftly/corridors'
+    | '/swiftly/deployment'
+    | '/swiftly/intelligence'
+    | '/swiftly/response'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiCopilotRoute: typeof ApiCopilotRoute
+  SwiftlyCopilotRoute: typeof SwiftlyCopilotRoute
+  SwiftlyCorridorsRoute: typeof SwiftlyCorridorsRoute
+  SwiftlyDeploymentRoute: typeof SwiftlyDeploymentRoute
+  SwiftlyIntelligenceRoute: typeof SwiftlyIntelligenceRoute
+  SwiftlyResponseRoute: typeof SwiftlyResponseRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +128,41 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/response': {
+      id: '/swiftly/response'
+      path: '/swiftly/response'
+      fullPath: '/swiftly/response'
+      preLoaderRoute: typeof SwiftlyResponseRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/intelligence': {
+      id: '/swiftly/intelligence'
+      path: '/swiftly/intelligence'
+      fullPath: '/swiftly/intelligence'
+      preLoaderRoute: typeof SwiftlyIntelligenceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/deployment': {
+      id: '/swiftly/deployment'
+      path: '/swiftly/deployment'
+      fullPath: '/swiftly/deployment'
+      preLoaderRoute: typeof SwiftlyDeploymentRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/corridors': {
+      id: '/swiftly/corridors'
+      path: '/swiftly/corridors'
+      fullPath: '/swiftly/corridors'
+      preLoaderRoute: typeof SwiftlyCorridorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/copilot': {
+      id: '/swiftly/copilot'
+      path: '/swiftly/copilot'
+      fullPath: '/swiftly/copilot'
+      preLoaderRoute: typeof SwiftlyCopilotRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/copilot': {
@@ -71,6 +178,11 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiCopilotRoute: ApiCopilotRoute,
+  SwiftlyCopilotRoute: SwiftlyCopilotRoute,
+  SwiftlyCorridorsRoute: SwiftlyCorridorsRoute,
+  SwiftlyDeploymentRoute: SwiftlyDeploymentRoute,
+  SwiftlyIntelligenceRoute: SwiftlyIntelligenceRoute,
+  SwiftlyResponseRoute: SwiftlyResponseRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
