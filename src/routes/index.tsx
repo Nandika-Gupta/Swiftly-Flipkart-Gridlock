@@ -4,17 +4,17 @@ import { useEffect, useMemo, useState } from "react";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Swiftly — Bengaluru Traffic Intelligence Platform" },
+      { title: "Swiftly — Event-Driven Congestion Intelligence for Bengaluru Traffic Police" },
       {
         name: "description",
         content:
-          "Swiftly forecasts event-driven congestion in Bengaluru using the EVITAS pipeline — DR Learner counterfactuals, event impact scoring, and ILP-optimized officer deployment.",
+          "Swiftly forecasts the operational impact of planned and unplanned events before congestion occurs, then recommends optimal officer deployment, barricading, and diversion strategies using 8,173 real Bengaluru ASTRaM events.",
       },
-      { property: "og:title", content: "Swiftly — Bengaluru Traffic Intelligence" },
+      { property: "og:title", content: "Swiftly — Event-Driven Congestion Intelligence" },
       {
         property: "og:description",
         content:
-          "ASTraM-grade event intelligence for BTP. 8,173 events, 23 corridors, real-time EVITAS risk scoring and optimal resource allocation.",
+          "Event impact forecasting and response planning for BTP. 8,173 ASTRaM events, 23 corridors, predictive EVITAS scoring and ILP-optimized deployment.",
       },
     ],
   }),
@@ -83,7 +83,7 @@ function SwiftlyShell() {
       <div className="swf-entered">
         <style>{css}</style>
         <iframe
-          title="Swiftly Command Center"
+          title="Swiftly Event Impact Simulation Environment"
           src="/swiftly.html"
           onLoad={() => setFrameLoaded(true)}
           className={`swf-frame ${frameLoaded ? "is-ready" : ""}`}
@@ -95,8 +95,8 @@ function SwiftlyShell() {
               <div className="swf-loader-brand">
                 <div className="swf-loader-mark">◈</div>
                 <div>
-                  <div className="swf-loader-name">SWIFTLY COMMAND CENTER</div>
-                  <div className="swf-loader-sub">Initializing 3D corridor intelligence</div>
+                  <div className="swf-loader-name">SWIFTLY EVENT COMMAND CENTER</div>
+                  <div className="swf-loader-sub">Initializing event impact simulation environment</div>
                 </div>
               </div>
 
@@ -111,7 +111,7 @@ function SwiftlyShell() {
                 </div>
                 <div className="swf-loader-stage">
                   <span className="swf-loader-stage-dot" />
-                  Handing over to live ops surface
+                  Handing over to event response environment
                 </div>
               </div>
 
@@ -134,7 +134,7 @@ function SwiftlyShell() {
             <div className="swf-entered-logo">◈</div>
             <div>
               <div className="swf-entered-title">SWIFTLY</div>
-              <div className="swf-entered-sub">Bengaluru Traffic Intelligence</div>
+              <div className="swf-entered-sub">Event-Driven Congestion Intelligence</div>
             </div>
           </div>
 
@@ -167,7 +167,7 @@ function SwiftlyShell() {
           <div className="swf-logo">◈</div>
           <div>
             <div className="swf-brand-name">SWIFTLY</div>
-            <div className="swf-brand-sub">Bengaluru Traffic Intelligence</div>
+            <div className="swf-brand-sub">Event-Driven Congestion Intelligence</div>
           </div>
         </div>
         <div className="swf-topbar-right">
@@ -198,7 +198,7 @@ function SwiftlyShell() {
                 <span className="swf-title-accent"> Event intelligence for Bengaluru.</span>
               </h1>
               <p className="swf-subtitle">
-                Swiftly forecasts event-driven congestion before it happens, then recommends optimal officer deployment and diversion plans — grounded in 8,173 real ASTRaM events.
+                Swiftly forecasts the operational impact of planned and unplanned events before congestion occurs, then recommends optimal officer deployment, barricading, and diversion strategies using 8,173 real Bengaluru ASTRaM events.
               </p>
             </div>
 
@@ -211,7 +211,7 @@ function SwiftlyShell() {
 
             <div className="swf-cta-row">
               <button className="swf-cta-primary" onClick={() => setEntered(true)}>
-                ENTER COMMAND CENTER
+                ENTER EVENT COMMAND CENTER
                 <span className="swf-cta-arrow">→</span>
               </button>
               <a className="swf-cta-secondary" href="#pipeline">
@@ -226,20 +226,25 @@ function SwiftlyShell() {
       <section className="swf-section">
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— OPERATIONAL CONTEXT</span>
-          <h2 className="swf-section-title">Event-driven congestion is reactive, manual, and unmeasured.</h2>
+          <h2 className="swf-section-title">Event-Driven Congestion Is Still Managed Reactively.</h2>
         </div>
         <div className="swf-problem-grid">
           <div className="swf-problem-card">
-            <div className="swf-problem-tag">PROBLEM</div>
-            <p>Rallies, processions, VIP movement, accidents and waterlogging create localized breakdowns across Bengaluru — every day.</p>
+            <div className="swf-problem-tag">Operational Challenge</div>
+            <p>Political rallies, festivals, sports events, VIP movements, accidents, construction activity, and sudden gatherings create localized traffic breakdowns across Bengaluru.</p>
           </div>
           <div className="swf-problem-card">
-            <div className="swf-problem-tag">CURRENT REALITY</div>
-            <p>Impact isn&apos;t quantified ahead of time. Officers are deployed reactively. Diversion plans are drafted by hand.</p>
+            <div className="swf-problem-tag">Why It&apos;s Hard Today</div>
+            <ul className="swf-problem-list">
+              <li>Event impact is not quantified in advance.</li>
+              <li>Deployment decisions rely on experience.</li>
+              <li>Diversion plans are reactive.</li>
+              <li>No structured post-event learning.</li>
+            </ul>
           </div>
           <div className="swf-problem-card swf-problem-card-accent">
             <div className="swf-problem-tag">SWIFTLY&apos;S ANSWER</div>
-            <p>Forecast event impact <em>before</em> congestion. Optimize manpower &amp; diversions on 8,173 real ASTRaM events.</p>
+            <p>Forecast event impact before congestion begins and generate data-driven deployment and diversion recommendations using historical event intelligence.</p>
           </div>
         </div>
       </section>
@@ -248,7 +253,7 @@ function SwiftlyShell() {
       <section id="pipeline" className="swf-section">
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— HOW SWIFTLY WORKS</span>
-          <h2 className="swf-section-title">Five operational stages. Raw event to deployed officer.</h2>
+          <h2 className="swf-section-title">Five operational stages. Event detection to deployed response.</h2>
         </div>
         <div className="swf-flow">
           <FlowNode n="01" title="ASTRaM Event" sub="Ingest" />
@@ -266,8 +271,8 @@ function SwiftlyShell() {
       {/* LIVE CORRIDOR INTELLIGENCE */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— LIVE CORRIDOR INTELLIGENCE</span>
-          <h2 className="swf-section-title">Top vulnerable corridors, ranked in real time.</h2>
+          <span className="swf-section-eyebrow">— EVENT VULNERABILITY INTELLIGENCE</span>
+          <h2 className="swf-section-title">Corridors ranked by event-driven impact risk.</h2>
         </div>
         <div className="swf-risk-grid">
           <RiskCorridor rank="01" name="Varthur Road" evitas="61.5" officers="8" band="orange" />
@@ -282,8 +287,8 @@ function SwiftlyShell() {
       <section className="swf-section">
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— DEPLOYMENT INTELLIGENCE</span>
-          <h2 className="swf-section-title">30 officers, optimally allocated.</h2>
-          <p className="swf-section-lede">ILP-driven allocation across EVITAS, historical density, vulnerability and causal impact.</p>
+          <h2 className="swf-section-title">30 officers and barricades, optimally allocated.</h2>
+          <p className="swf-section-lede">ILP-driven deployment across EVITAS score, event density, corridor vulnerability and predicted causal impact.</p>
         </div>
         <div className="swf-deploy-grid">
           <div className="swf-deploy-bars">
@@ -319,8 +324,8 @@ function SwiftlyShell() {
       {/* COUNTERFACTUAL — two scenarios */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— COUNTERFACTUAL SIMULATOR</span>
-          <h2 className="swf-section-title">&ldquo;What if?&rdquo; — grounded in causal inference.</h2>
+          <span className="swf-section-eyebrow">— EVENT IMPACT SIMULATOR</span>
+          <h2 className="swf-section-title">&ldquo;What if?&rdquo; — Simulate event scenarios before they happen.</h2>
         </div>
         <div className="swf-scenario-grid">
           <Scenario q="What if a political rally occurs on ORR East?" baseline="EVITAS 38" projected="EVITAS 74" delta="+36" tone="red" rec="Pre-deploy 6 officers · barricade 2 junctions" />
@@ -332,7 +337,7 @@ function SwiftlyShell() {
       <section className="swf-section">
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— PARTNERS &amp; REAL DATA</span>
-          <h2 className="swf-section-title">Built on real Bengaluru traffic intelligence.</h2>
+          <h2 className="swf-section-title">Built on real Bengaluru event intelligence.</h2>
         </div>
         <div className="swf-realdata-strip">
           <div><div className="swf-rd-v">8,173</div><div className="swf-rd-l">Real Events</div></div>
@@ -356,7 +361,7 @@ function SwiftlyShell() {
 
 
       <footer className="swf-footer">
-        <div>SWIFTLY · Predict. Deploy. Divert. · Built for the Bengaluru Traffic Police</div>
+        <div>SWIFTLY · Predict. Deploy. Divert. · Event Intelligence for Bengaluru Traffic Police</div>
         <div>Powered by ASTRaM · MapMyIndia · EVITAS v2.4</div>
       </footer>
     </div>
