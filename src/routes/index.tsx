@@ -321,16 +321,14 @@ function SwiftlyShell() {
         </div>
       </section>
 
-      {/* COUNTERFACTUAL — two scenarios */}
-      <section className="swf-section">
+      {/* COUNTERFACTUAL SCENARIO ENGINE — fully interactive, data-driven */}
+      <section id="simulator" className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— EVENT IMPACT SIMULATOR</span>
-          <h2 className="swf-section-title">&ldquo;What if?&rdquo; — Simulate event scenarios before they happen.</h2>
+          <span className="swf-section-eyebrow">— COUNTERFACTUAL SCENARIO ENGINE</span>
+          <h2 className="swf-section-title">Simulate event impact. See EVITAS, delay, recovery & deployment update live.</h2>
+          <p className="swf-section-lede">Drive every parameter directly. Outputs are computed from your inputs and the real ASTraM corridor &amp; counterfactual datasets — not pre-recorded.</p>
         </div>
-        <div className="swf-scenario-grid">
-          <Scenario q="What if a political rally occurs on ORR East?" baseline="EVITAS 38" projected="EVITAS 74" delta="+36" tone="red" rec="Pre-deploy 6 officers · barricade 2 junctions" />
-          <Scenario q="What if 4 additional officers are deployed on Varthur Road?" baseline="EVITAS 61.5" projected="EVITAS 44" delta="−17.5" tone="green" rec="Approve · within manpower budget" />
-        </div>
+        <CounterfactualEngine />
       </section>
 
       {/* PARTNERS & REAL DATA */}
