@@ -1,0 +1,301 @@
+[
+  {
+    "corridor_name": "CBD 1",
+    "accidents_per_year": 50.1,
+    "incidents_per_year": 91.7,
+    "congestion_index": 92.3,
+    "vehicle_volume_kpd": 86.4,
+    "peak_vulnerability": 96.4,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Airport New South Road",
+    "accidents_per_year": 103.4,
+    "incidents_per_year": 138.1,
+    "congestion_index": 92.5,
+    "vehicle_volume_kpd": 78.8,
+    "peak_vulnerability": 91.8,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Mysore Road",
+    "accidents_per_year": 101.4,
+    "incidents_per_year": 243.7,
+    "congestion_index": 75.9,
+    "vehicle_volume_kpd": 77.5,
+    "peak_vulnerability": 82.5,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Tumkur Road",
+    "accidents_per_year": 108.6,
+    "incidents_per_year": 203.4,
+    "congestion_index": 81.7,
+    "vehicle_volume_kpd": 80.6,
+    "peak_vulnerability": 86.6,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "ORR North 1",
+    "accidents_per_year": 89.0,
+    "incidents_per_year": 198.5,
+    "congestion_index": 81.2,
+    "vehicle_volume_kpd": 80.1,
+    "peak_vulnerability": 85.1,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Old Airport Road",
+    "accidents_per_year": 92.1,
+    "incidents_per_year": 161.7,
+    "congestion_index": 74.1,
+    "vehicle_volume_kpd": 69.0,
+    "peak_vulnerability": 83.0,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "ORR East 1",
+    "accidents_per_year": 90.5,
+    "incidents_per_year": 187.9,
+    "congestion_index": 70.8,
+    "vehicle_volume_kpd": 56.9,
+    "peak_vulnerability": 85.9,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "CBD 2",
+    "accidents_per_year": 100.3,
+    "incidents_per_year": 142.7,
+    "congestion_index": 83.7,
+    "vehicle_volume_kpd": 51.8,
+    "peak_vulnerability": 85.8,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "IRR(Thanisandra road)",
+    "accidents_per_year": 95.6,
+    "incidents_per_year": 171.1,
+    "congestion_index": 71.5,
+    "vehicle_volume_kpd": 58.8,
+    "peak_vulnerability": 82.8,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Non-corridor",
+    "accidents_per_year": 303.9,
+    "incidents_per_year": 697.3,
+    "congestion_index": 68.3,
+    "vehicle_volume_kpd": 72.5,
+    "peak_vulnerability": 76.5,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Bellary Road 1",
+    "accidents_per_year": 90.8,
+    "incidents_per_year": 245.8,
+    "congestion_index": 79.3,
+    "vehicle_volume_kpd": 59.5,
+    "peak_vulnerability": 82.5,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Magadi Road",
+    "accidents_per_year": 71.6,
+    "incidents_per_year": 134.1,
+    "congestion_index": 79.5,
+    "vehicle_volume_kpd": 51.8,
+    "peak_vulnerability": 74.8,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Hennur Main Road",
+    "accidents_per_year": 102.7,
+    "incidents_per_year": 147.3,
+    "congestion_index": 74.5,
+    "vehicle_volume_kpd": 70.8,
+    "peak_vulnerability": 74.8,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Hosur Road",
+    "accidents_per_year": 72.8,
+    "incidents_per_year": 173.6,
+    "congestion_index": 77.0,
+    "vehicle_volume_kpd": 46.4,
+    "peak_vulnerability": 73.4,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Varthur Road",
+    "accidents_per_year": 80.2,
+    "incidents_per_year": 182.9,
+    "congestion_index": 78.6,
+    "vehicle_volume_kpd": 70.1,
+    "peak_vulnerability": 82.1,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Old Madras Road",
+    "accidents_per_year": 69.0,
+    "incidents_per_year": 176.3,
+    "congestion_index": 65.6,
+    "vehicle_volume_kpd": 71.0,
+    "peak_vulnerability": 81.0,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "ORR East 2",
+    "accidents_per_year": 62.0,
+    "incidents_per_year": 172.7,
+    "congestion_index": 76.1,
+    "vehicle_volume_kpd": 65.6,
+    "peak_vulnerability": 81.6,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "ORR North 2",
+    "accidents_per_year": 103.8,
+    "incidents_per_year": 205.3,
+    "congestion_index": 66.5,
+    "vehicle_volume_kpd": 57.1,
+    "peak_vulnerability": 76.1,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Bannerghata Road",
+    "accidents_per_year": 65.7,
+    "incidents_per_year": 124.6,
+    "congestion_index": 71.0,
+    "vehicle_volume_kpd": 54.6,
+    "peak_vulnerability": 78.6,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "West of Chord Road",
+    "accidents_per_year": 90.9,
+    "incidents_per_year": 178.3,
+    "congestion_index": 64.6,
+    "vehicle_volume_kpd": 60.3,
+    "peak_vulnerability": 70.3,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Bellary Road 2",
+    "accidents_per_year": 91.3,
+    "incidents_per_year": 219.2,
+    "congestion_index": 74.1,
+    "vehicle_volume_kpd": 59.8,
+    "peak_vulnerability": 73.8,
+    "peak_windows": [
+      "9:00\u201311:30",
+      "17:30\u201319:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "ORR West 1",
+    "accidents_per_year": 75.4,
+    "incidents_per_year": 171.2,
+    "congestion_index": 58.4,
+    "vehicle_volume_kpd": 41.6,
+    "peak_vulnerability": 69.6,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  },
+  {
+    "corridor_name": "Unknown",
+    "accidents_per_year": 75.6,
+    "incidents_per_year": 171.6,
+    "congestion_index": 53.9,
+    "vehicle_volume_kpd": 48.7,
+    "peak_vulnerability": 60.7,
+    "peak_windows": [
+      "8:00\u201310:30",
+      "18:30\u201320:30"
+    ],
+    "source": "Bengaluru Traffic Police \u2014 Annual Statistics (Historical)"
+  }
+]
