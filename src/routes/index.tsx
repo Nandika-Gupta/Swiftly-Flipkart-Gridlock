@@ -895,8 +895,55 @@ function CounterfactualEngine() {
             </div>
           )}
         </div>
+
+        <div className="swf-cf-panel">
+          <div className="swf-cf-panel-h">BTP CORRIDOR VULNERABILITY (HISTORICAL)</div>
+          <p className="swf-cf-panel-lede">
+            Bengaluru Traffic Police annual statistics for <b>{corridorName}</b>. Historical risk factors — feeds the EVITAS baseline and manpower sizing, not real-time signals.
+          </p>
+          {!btp ? (
+            <div className="swf-cf-empty">No BTP stats for this corridor.</div>
+          ) : (
+            <>
+              <div className="swf-cf-btp-grid">
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Accidents / yr</div>
+                  <div className="swf-cf-btp-v">{btp.accidents_per_year.toFixed(0)}</div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Incidents / yr</div>
+                  <div className="swf-cf-btp-v">{btp.incidents_per_year.toFixed(0)}</div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Congestion idx</div>
+                  <div className="swf-cf-btp-v">{btp.congestion_index.toFixed(0)}<span className="swf-cf-btp-u">/100</span></div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Volume</div>
+                  <div className="swf-cf-btp-v">{btp.vehicle_volume_kpd.toFixed(0)}<span className="swf-cf-btp-u">k veh/day</span></div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Peak vulnerability</div>
+                  <div className="swf-cf-btp-v">{btp.peak_vulnerability.toFixed(0)}<span className="swf-cf-btp-u">/100</span></div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">EVITAS uplift</div>
+                  <div className="swf-cf-btp-v">+{btpUplift.toFixed(1)}</div>
+                </div>
+              </div>
+              <div className="swf-cf-btp-peaks">
+                <span>Peak windows:</span>
+                {btp.peak_windows.map((w) => (
+                  <span key={w} className="swf-cf-btp-chip">{w}</span>
+                ))}
+              </div>
+              <div className="swf-cf-btp-src">Source: Bengaluru Traffic Police · Annual Statistics</div>
+            </>
+          )}
+        </div>
       </div>
     </div>
+
   );
 }
 
