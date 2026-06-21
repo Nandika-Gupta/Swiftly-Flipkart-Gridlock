@@ -1,38 +1,180 @@
-# Bengaluru Traffic Command
+# SWIFTLY — Event-Driven Congestion Intelligence for Bengaluru
 
-AI-powered traffic command center for Bengaluru — real-time impact analysis, deployment planning, and response planning for large events and road incidents.
+> **Predict. Deploy. Divert.**
+> An operational command surface that forecasts the traffic impact of planned and unplanned events *before* congestion occurs — built on 8,173 real ASTraM event records, Bengaluru Traffic Police (BTP) historical statistics and MapMyIndia corridor intelligence.
 
-## Overview
+---
 
-Bengaluru Traffic Command is an operations dashboard that helps traffic officers and city planners anticipate congestion, allocate resources, and respond to incidents. It combines ASTraM datasets with a counterfactual scenario engine to produce realistic, data-driven recommendations rather than static placeholder outputs.
+## Theme
 
-## Key Features
+**Dark, high-density command-center aesthetic** in the spirit of modern public-safety operations dashboards (Drishti / Palantir Gotham style).
 
-- **Overview** — Live command-center snapshot of city-wide traffic posture, EVITAS score, and active corridors.
-- **Impact Analysis** — Counterfactual scenario engine to simulate changes in crowd size, event duration, road closures, and officer allocation. Dynamically updates EVITAS score and predicted delay.
-- **Deployment Planner** — Calculates officer allocation using corridor risk, event severity, historical congestion impact, and crowd size. Produces realistic manpower and barricading recommendations.
-- **Response Planner** — What-if analysis for increasing crowd size (25% / 50% / 100%), modifying road closures, and changing event duration to project operational impact immediately.
+- **Palette** — Deep navy/space `#060912` → `#0b1424` surfaces, cyan `#4fd1ff` signal accents, EVITAS band colors (green / yellow / orange / red) for risk severity, amber CTA `#ff8c42`.
+- **Typography** — System UI stack with monospace numerals for metrics; uppercase eyebrows with wide letter-spacing for section structure.
+- **Motion** — Subtle radial glows, animated scan bars on loading, hover lifts on capability cards. No frivolous animation.
+- **Density** — Inspired by real traffic-ops control rooms: information-rich panels, no marketing whitespace inside operational modules.
 
-## Tech Stack
+Landing page sells the vision. Operational modules demonstrate the technology.
 
-- **Framework:** TanStack Start (React 19 + Vite 7)
-- **Styling:** Tailwind CSS v4
-- **Backend:** Lovable Cloud (Supabase: Postgres, Auth, Storage, Edge Functions)
-- **Language:** TypeScript
+---
 
-## Getting Started
+## Screenshots
 
-```bash
-bun install
-bun run dev
+### Landing — vision, EVITAS framework, partners, capabilities
+![Landing](docs/screenshots/01_landing.png)
+
+### Operations Center — standalone 3D command surface (event simulation, AI insight, corridor map)
+![Operations Center](docs/screenshots/02_operations_center.png)
+
+### Module 01 · Event Intelligence — live ASTraM event stream, EVITAS classification
+![Event Intelligence](docs/screenshots/03_event_intelligence.png)
+
+### Module 02 · Operational Scenario Lab — simulate crowd / closure / duration, see deployment update
+![Scenario Lab](docs/screenshots/04_scenario_lab.png)
+
+### Module 03 · Corridor Intelligence — 23 corridors ranked by EVITAS + BTP vulnerability
+![Corridor Intelligence](docs/screenshots/05_corridor_intelligence.png)
+
+### Module 04 · Response Planning — five-stage operational playbook
+![Response Planning](docs/screenshots/06_response_planning.png)
+
+### Module 05 · Command Copilot — plain-English Q&A grounded in ASTraM + BTP data
+![Command Copilot](docs/screenshots/07_command_copilot.png)
+
+---
+
+## What's inside
+
+**Five operational modules** wired around the **EVITAS** (Event Vulnerability & Impact Traffic Assessment Score, 0–100):
+
+| # | Module | What it does |
+|---|--------|--------------|
+| 01 | **Event Intelligence** | Live ASTraM event stream classified by EVITAS impact and cause |
+| 02 | **Operational Scenario Lab** | Simulate crowd, closure, duration — EVITAS, delay and deployment update live |
+| 03 | **Corridor Intelligence** | 23 Bengaluru corridors ranked by EVITAS + BTP vulnerability (accidents, congestion, peaks) |
+| 04 | **Response Planning** | Five-stage operational playbook from forecast → debrief |
+| 05 | **Command Copilot** | Ask plain-English questions grounded in ASTraM + BTP data |
+
+**EVITAS bands**
+
+| Band | Range | Posture |
+|------|-------|---------|
+| Green | 0–34 | Normal — standard rotation |
+| Yellow | 35–54 | Watch — pre-position spotters |
+| Orange | 55–74 | Elevated — activate diversion, reserves on standby |
+| Red | 75–100 | Critical — full deployment, public advisory, real-time re-scoring |
+
+---
+
+## Data sources
+
+All data shipped with this repo is **real, not synthetic**:
+
+| Source | What it provides | Path |
+|--------|-------------------|------|
+| **ASTraM Event Data** | 8,173 Bengaluru event records · 23 corridors · 18 months | `public/data/events.json`, `public/data/counterfactuals.json` |
+| **Bengaluru Traffic Police (BTP)** | Historical statistics — accidents, incidents, congestion index, peak windows. Used as historical risk factors, not real-time feeds | `public/data/btp_stats.json` |
+| **MapMyIndia** | Corridor visualization, route intelligence, diversion planning surface | Embedded in the standalone Operations Center bundle |
+
+> **Note on what's *not* in scope:** This is an operational intelligence surface built on the open data above. It does **not** include a calibrated SUMO/CityFlow microsimulator, per-link real-time speed feeds (Google/TomTom/HERE), live BTP loop-detector feeds, intervention logs, or matched outcome labels. Those would be required for a full MARL training loop and are not in any open release.
+
+---
+
+## Tech stack
+
+- **Framework** — [TanStack Start v1](https://tanstack.com/start) (React 19, SSR, file-based routing)
+- **Bundler** — Vite 7
+- **Styling** — Tailwind CSS v4 + custom design tokens
+- **UI Primitives** — Radix UI + shadcn/ui
+- **Data** — Static JSON snapshots in `public/data/`
+- **AI Copilot** — Server function calling an OpenAI-compatible gateway via `@ai-sdk/openai-compatible`
+- **Operations Center** — Pre-bundled standalone HTML (`public/swiftly.html`) so the 3D map surface loads independently of the SPA shell
+
+---
+
+## Project structure
+
+```
+src/
+  routes/
+    __root.tsx               # Root layout + global head
+    index.tsx                # Landing page (vision, EVITAS, partners, capabilities)
+    swiftly.intelligence.tsx # Module 01 — Event Intelligence
+    swiftly.deployment.tsx   # Module 02 — Operational Scenario Lab
+    swiftly.corridors.tsx    # Module 03 — Corridor Intelligence
+    swiftly.response.tsx     # Module 04 — Response Planning
+    swiftly.copilot.tsx      # Module 05 — Command Copilot
+    api/                     # Server routes (Copilot endpoint, etc.)
+  components/swiftly/        # ModuleShell, ScenarioLab, design tokens
+public/
+  swiftly.html               # Standalone Operations Center bundle
+  swiftly-augment.js         # Data + Copilot wiring for the standalone surface
+  data/                      # ASTraM, BTP, corridor, counterfactual JSON
+docs/screenshots/            # README screenshots
 ```
 
-The app runs on `http://localhost:8080`.
+---
 
-## Deployment
+## Run locally
 
-This project is built with [Lovable](https://lovable.dev) and can be deployed via the Lovable platform or self-hosted on Vercel / Cloudflare after connecting the GitHub repo.
+**Prerequisites** — Node 20+ and [Bun](https://bun.sh) (or npm/pnpm).
 
-## Data
+```bash
+# install
+bun install            # or: npm install
 
-All analytics are driven by ASTraM datasets and live signals from the Lovable Cloud backend — no static or placeholder AI outputs.
+# dev server (http://localhost:8080)
+bun run dev            # or: npm run dev
+
+# production build
+bun run build
+bun run preview
+```
+
+**Optional — Lovable Cloud / Copilot**
+The Command Copilot module calls `/api/copilot` which proxies to an OpenAI-compatible gateway. To enable it, set `LOVABLE_API_KEY` (or your gateway key) in the project's secrets — the rest of the app works fully without it.
+
+---
+
+## Routes
+
+| Route | Purpose |
+|-------|---------|
+| `/` | Landing page |
+| `/swiftly.html` | Standalone Operations Center (hard-loaded, bypasses SPA router) |
+| `/swiftly/intelligence` | Module 01 |
+| `/swiftly/deployment` | Module 02 |
+| `/swiftly/corridors` | Module 03 |
+| `/swiftly/response` | Module 04 |
+| `/swiftly/copilot` | Module 05 |
+
+---
+
+## Push this project to GitHub
+
+Lovable has a first-class two-way GitHub sync.
+
+1. In the Lovable editor, open the **+** menu (bottom-left of the chat) → **GitHub → Connect project**
+2. Authorize the **Lovable GitHub App**
+3. Pick the GitHub account / organization
+4. Click **Create Repository** — Lovable pushes the full codebase and keeps it in two-way sync
+
+After that you can `git clone` the repo, develop locally, and pushes will flow back into Lovable automatically. Full docs: <https://docs.lovable.dev/integrations/github>.
+
+---
+
+## Download the source
+
+- **From Lovable** — Code Editor → **Download codebase** (bottom of file tree)
+- **From this repo** — once pushed to GitHub: `Code → Download ZIP`, or `git clone <repo-url>`
+- A pre-built source archive is attached to this delivery as `swiftly-source.zip`
+
+---
+
+## Credits
+
+Built with [Lovable](https://lovable.dev). Data partners: **ASTraM**, **Bengaluru Traffic Police**, **MapMyIndia (Mappls)**.
+
+---
+
+*SWIFTLY · Towards an Unjammed Bengaluru.*
