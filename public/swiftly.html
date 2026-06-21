@@ -1984,5 +1984,114 @@ class Component extends DCLogic {
   }
 })();
 </script>
+<script>
+/* SWIFTLY enhancements: real data + real AI copilot + BTP badge */
+(function(){
+  // 1) Load datasets
+  window.SWIFTLY_DATA = { ready:false };
+  Promise.all([
+    fetch('/data/corridors.json').then(r=>r.json()).catch(()=>[]),
+    fetch('/data/events.json').then(r=>r.json()).catch(()=>({})),
+    fetch('/data/counterfactuals.json').then(r=>r.json()).catch(()=>[])
+  ]).then(([corridors, events, cf])=>{
+    window.SWIFTLY_DATA = { ready:true, corridors, events, counterfactuals: cf };
+    window.dispatchEvent(new CustomEvent('swiftly-data-ready'));
+    console.log('[Swiftly] data loaded:',
+      corridors.length,'corridors,',
+      events.total,'historical events,',
+      cf.length,'counterfactuals');
+  });
+
+  // 2) Add Bengaluru Traffic Police + feed status badges to top bar (DOM injection)
+  function injectBadges(){
+    var bar = document.querySelector('[data-swiftly-topbar]') ||
+              document.querySelector('header') ||
+              document.body.firstElementChild;
+    if(!bar || bar.querySelector('.swf-btp-badge')) return;
+    var badge = document.createElement('div');
+    badge.className='swf-btp-badge';
+    badge.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2147483646;display:flex;gap:8px;align-items:center;padding:6px 12px;border-radius:10px;background:rgba(13,19,31,.78);backdrop-filter:blur(14px);border:1px solid rgba(124,142,200,.18);font:600 10.5px Inter,system-ui;color:#E7ECF5;letter-spacing:.04em;pointer-events:none;';
+    badge.innerHTML = '<span style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#EF4444);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;">BTP</span>'+
+      '<span style="color:#E7ECF5;">BENGALURU TRAFFIC POLICE</span>'+
+      '<span style="width:1px;height:12px;background:rgba(255,255,255,.12);"></span>'+
+      '<span style="display:flex;align-items:center;gap:5px;color:#8a96ac;"><span class="swf-dot" style="width:6px;height:6px;border-radius:50%;background:#22C55E;box-shadow:0 0 6px #22C55E;animation:swfPulse 2s infinite;"></span>ASTraM</span>'+
+      '<span style="display:flex;align-items:center;gap:5px;color:#8a96ac;"><span class="swf-dot" style="width:6px;height:6px;border-radius:50%;background:#06B6D4;box-shadow:0 0 6px #06B6D4;animation:swfPulse 2s infinite .5s;"></span>MapMyIndia</span>';
+    var style = document.createElement('style');
+    style.textContent='@keyframes swfPulse{0%,100%{opacity:1}50%{opacity:.45}}';
+    document.head.appendChild(style);
+    document.body.appendChild(badge);
+  }
+  if(document.readyState!=='loading') injectBadges(); else document.addEventListener('DOMContentLoaded', injectBadges);
+
+  // 3) Real AI Copilot — intercept questions, route to /api/copilot
+  // The standalone uses _askCopilot(kind) with preset chips. We add a free-text input + send to LLM.
+  function buildContext(){
+    var d = window.SWIFTLY_DATA;
+    if(!d || !d.ready) return 'Datasets still loading.';
+    var topRisk = (d.corridors||[]).slice(0,5).map(function(c){
+      return c.corridor_name+' (rank '+c.risk_rank+', score '+(+c.risk_score).toFixed(2)+', '+c.event_count+' events)';
+    }).join('; ');
+    var totals = d.events||{};
+    var topCauses = Object.entries(totals.by_cause||{}).slice(0,5)
+      .map(function(p){return p[0]+':'+p[1]}).join(', ');
+    return [
+      'SWIFTLY — Bengaluru Traffic Intelligence Platform.',
+      'Total historical ASTraM events analyzed: '+(totals.total||'n/a')+'.',
+      'Top 5 corridors by EVITAS risk: '+topRisk+'.',
+      'Top event causes: '+topCauses+'.',
+      'Use this data when answering. Be concise (2-4 sentences). Recommend officers, barricades, diversions when asked.'
+    ].join(' ');
+  }
+  window.SWIFTLY_askLLM = async function(question){
+    var ctx = buildContext();
+    try{
+      var res = await fetch('/api/copilot', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ question: question, context: ctx })
+      });
+      if(!res.ok){
+        var t = await res.text();
+        return 'Copilot error: '+res.status+' '+t.slice(0,200);
+      }
+      var j = await res.json();
+      return j.answer || '(no response)';
+    }catch(e){ return 'Copilot offline: '+e.message; }
+  };
+
+  // 4) Inject a free-text input + send button into the copilot panel whenever it opens
+  function ensureCopilotInput(){
+    var panels = document.querySelectorAll('[class*="copilot"], [data-copilot], div');
+    // Heuristic: find a visible panel containing the chip "What if crowd"
+    var panel=null;
+    document.querySelectorAll('button').forEach(function(b){
+      if(b.textContent && b.textContent.indexOf('crowd')>=0 && b.offsetParent){
+        var p=b.closest('div'); while(p && p.parentElement && p.scrollHeight<200){ p=p.parentElement; }
+        if(p) panel=p;
+      }
+    });
+    if(!panel || panel.querySelector('.swf-copilot-input')) return;
+    var wrap=document.createElement('div');
+    wrap.className='swf-copilot-input';
+    wrap.style.cssText='display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,142,200,.16);';
+    wrap.innerHTML='<input type="text" placeholder="Ask Swiftly Copilot anything..." style="flex:1;background:rgba(17,24,39,.6);border:1px solid rgba(124,142,200,.2);color:#E7ECF5;padding:8px 10px;border-radius:7px;font:500 12px Inter,system-ui;outline:none;">'+
+      '<button style="padding:8px 12px;border:0;border-radius:7px;background:linear-gradient(135deg,#6366F1,#06B6D4);color:#fff;font:700 11px Inter,system-ui;cursor:pointer;">Send</button>'+
+      '<div class="swf-answer" style="display:none;width:100%;margin-top:8px;padding:10px 12px;border-radius:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.22);color:#E7ECF5;font:400 12px/1.55 Inter,system-ui;white-space:pre-wrap;"></div>';
+    panel.appendChild(wrap);
+    var input=wrap.querySelector('input'), btn=wrap.querySelector('button'), out=wrap.querySelector('.swf-answer');
+    async function ask(){
+      var q=input.value.trim(); if(!q) return;
+      out.style.display='block'; out.textContent='Thinking…';
+      btn.disabled=true;
+      out.textContent = await window.SWIFTLY_askLLM(q);
+      btn.disabled=false;
+    }
+    btn.addEventListener('click', ask);
+    input.addEventListener('keydown', function(e){ if(e.key==='Enter') ask(); });
+  }
+  setInterval(ensureCopilotInput, 800);
+})();
+</script>
 </body>
+
 </html>
