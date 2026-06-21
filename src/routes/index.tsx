@@ -198,7 +198,7 @@ function SwiftlyShell() {
                 Predicting and preventing event-driven congestion before it happens.
               </p>
               <p className="swf-hero-cred">
-                Powered by 8,173 ASTraM event records, EVITAS risk intelligence, counterfactual simulation, and AI-powered deployment optimization.
+                Powered by 8,173 real ASTraM event records, EVITAS risk scoring, historical counterfactual lookups, and rule-based deployment optimization.
               </p>
             </div>
 
