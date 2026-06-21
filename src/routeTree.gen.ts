@@ -10,12 +10,18 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SwiftlyIntelligenceRouteImport } from './routes/swiftly.intelligence'
 import { Route as SwiftlyDeploymentRouteImport } from './routes/swiftly.deployment'
 import { Route as ApiCopilotRouteImport } from './routes/api/copilot'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyIntelligenceRoute = SwiftlyIntelligenceRouteImport.update({
+  id: '/swiftly/intelligence',
+  path: '/swiftly/intelligence',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SwiftlyDeploymentRoute = SwiftlyDeploymentRouteImport.update({
@@ -33,30 +39,43 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
+  '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
+  '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
+  '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/copilot' | '/swiftly/deployment'
+  fullPaths:
+    | '/'
+    | '/api/copilot'
+    | '/swiftly/deployment'
+    | '/swiftly/intelligence'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/copilot' | '/swiftly/deployment'
-  id: '__root__' | '/' | '/api/copilot' | '/swiftly/deployment'
+  to: '/' | '/api/copilot' | '/swiftly/deployment' | '/swiftly/intelligence'
+  id:
+    | '__root__'
+    | '/'
+    | '/api/copilot'
+    | '/swiftly/deployment'
+    | '/swiftly/intelligence'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiCopilotRoute: typeof ApiCopilotRoute
   SwiftlyDeploymentRoute: typeof SwiftlyDeploymentRoute
+  SwiftlyIntelligenceRoute: typeof SwiftlyIntelligenceRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -66,6 +85,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/intelligence': {
+      id: '/swiftly/intelligence'
+      path: '/swiftly/intelligence'
+      fullPath: '/swiftly/intelligence'
+      preLoaderRoute: typeof SwiftlyIntelligenceRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/swiftly/deployment': {
@@ -89,6 +115,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiCopilotRoute: ApiCopilotRoute,
   SwiftlyDeploymentRoute: SwiftlyDeploymentRoute,
+  SwiftlyIntelligenceRoute: SwiftlyIntelligenceRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
