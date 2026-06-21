@@ -165,19 +165,19 @@ function SwiftlyShell() {
             </div>
             <div className="swf-corr-list">
               {corridors.map((c) => {
-                const band =
-                  c.mean_evitas >= 60 ? "orange" : c.mean_evitas >= 40 ? "yellow" : "green";
+                const s = scoreOf(c);
+                const band = s >= 60 ? "orange" : s >= 40 ? "yellow" : "green";
                 return (
                   <div className="swf-corr" key={c.corridor_name}>
-                    <div className="swf-corr-rank">#{c.risk_rank}</div>
+                    <div className="swf-corr-rank">#{c.risk_rank ?? "—"}</div>
                     <div className="swf-corr-info">
                       <div className="swf-corr-name">{c.corridor_name}</div>
                       <div className="swf-corr-meta">
-                        {c.event_count} events · {c.red_events} RED · {c.orange_events} ORANGE
+                        {c.event_count ?? 0} events · closure {((c.closure_rate ?? 0) * 100).toFixed(1)}%
                       </div>
                     </div>
                     <div className={`swf-corr-score swf-band-${band}`}>
-                      {c.mean_evitas.toFixed(1)}
+                      {s.toFixed(1)}
                     </div>
                   </div>
                 );
@@ -188,8 +188,8 @@ function SwiftlyShell() {
               <div className="swf-alert">
                 <div className="swf-alert-tag">▲ TOP RISK</div>
                 <div className="swf-alert-body">
-                  <strong>{top.corridor_name}</strong> — mean EVITAS {top.mean_evitas.toFixed(1)},
-                  peak {top.max_evitas}. Recommend pre-positioning officers during 9–11 AM and 6–8 PM windows.
+                  <strong>{top.corridor_name}</strong> — risk score {scoreOf(top).toFixed(1)}.
+                  Recommend pre-positioning officers during 9–11 AM and 6–8 PM windows.
                 </div>
               </div>
             )}
