@@ -288,7 +288,7 @@ function SwiftlyShell() {
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— DEPLOYMENT INTELLIGENCE</span>
           <h2 className="swf-section-title">30 officers and barricades, optimally allocated.</h2>
-          <p className="swf-section-lede">ILP-driven deployment across EVITAS score, event density, corridor vulnerability and predicted causal impact.</p>
+          <p className="swf-section-lede">Rule-based allocator weights EVITAS score, corridor risk_score (from ASTraM history), event closure rate, and crowd estimate to size manpower per corridor.</p>
         </div>
         <div className="swf-deploy-grid">
           <div className="swf-deploy-bars">
@@ -311,11 +311,11 @@ function SwiftlyShell() {
           </div>
           <div className="swf-deploy-summary">
             <div className="swf-deploy-big">30</div>
-            <div className="swf-deploy-big-label">Officers · ILP-allocated</div>
+            <div className="swf-deploy-big-label">Officers · rule-allocated</div>
             <ul className="swf-deploy-points">
               <li><span>—</span> Min coverage for every RED &amp; ORANGE corridor.</li>
-              <li><span>—</span> Weighted spillover minimized via SciPy linprog.</li>
-              <li><span>—</span> Re-solves in &lt; 1.2 s on state change.</li>
+              <li><span>—</span> Transparent weighting — no black-box model.</li>
+              <li><span>—</span> Re-computes instantly on scenario change.</li>
             </ul>
           </div>
         </div>
