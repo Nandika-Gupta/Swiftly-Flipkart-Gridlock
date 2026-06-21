@@ -584,6 +584,11 @@ const css = `
 .swf-title{max-width:920px;font-size:clamp(38px,4.9vw,68px);line-height:1.02;font-weight:850;letter-spacing:-.04em;margin:0;color:#f7f9fd}
 .swf-title-accent{display:inline;color:#8de2ff}
 .swf-subtitle{max-width:880px;margin:16px 0 0;color:#d2daea;font-size:18px;line-height:1.62}
+.swf-hero-badge{display:inline-flex;align-items:center;gap:10px;padding:8px 14px;border-radius:999px;background:rgba(79,209,255,.08);border:1px solid rgba(79,209,255,.22);font-size:11px;letter-spacing:2.4px;color:#7bd8ff;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin-bottom:22px}
+.swf-hero-brand{max-width:920px;font-size:clamp(56px,8vw,110px);line-height:.95;font-weight:850;letter-spacing:-.05em;margin:0;color:#f7f9fd}
+.swf-hero-tagline{max-width:860px;font-size:clamp(22px,3.2vw,40px);line-height:1.15;font-weight:700;letter-spacing:-.02em;margin:14px 0 0;color:#c8d6ee}
+.swf-hero-mission{max-width:800px;margin:18px 0 0;color:#e0e8f5;font-size:clamp(16px,1.6vw,20px);line-height:1.55;font-weight:500}
+.swf-hero-cred{max-width:860px;margin:12px 0 0;color:#9aaccc;font-size:14px;line-height:1.6}
 .swf-live-strip{display:flex;justify-content:space-between;gap:16px;align-items:center;margin-top:24px;padding:14px 16px;border-radius:16px;background:rgba(9,18,32,.26);border:1px solid rgba(255,255,255,.08)}
 .swf-live-status-label{font-size:10px;text-transform:uppercase;letter-spacing:1.6px;color:#93a6ca;font-weight:800}
 .swf-live-status-value{margin-top:6px;font-size:16px;font-weight:700;color:#f3f7fc}
