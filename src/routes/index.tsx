@@ -502,30 +502,6 @@ function RiskCorridor({ rank, name, evitas, officers, band }: { rank: string; na
   );
 }
 
-function Scenario({ q, baseline, projected, delta, tone, rec }: { q: string; baseline: string; projected: string; delta: string; tone: "red" | "green"; rec: string }) {
-  return (
-    <div className="swf-scenario">
-      <div className="swf-scenario-q">{q}</div>
-      <div className="swf-scenario-row">
-        <div><div className="swf-scenario-lbl">Baseline</div><div className="swf-scenario-val">{baseline}</div></div>
-        <div className="swf-scenario-arrow">→</div>
-        <div><div className="swf-scenario-lbl">Projected</div><div className="swf-scenario-val">{projected}</div></div>
-        <div className={`swf-scenario-delta swf-delta-${tone}`}>{delta}</div>
-      </div>
-      <div className="swf-scenario-rec">▸ {rec}</div>
-    </div>
-  );
-}
-
-function Country({ flag, name, lesson }: { flag: string; name: string; lesson: string }) {
-  return (
-    <div className="swf-country">
-      <div className="swf-country-flag">{flag}</div>
-      <div className="swf-country-name">{name}</div>
-      <div className="swf-country-lesson">{lesson}</div>
-    </div>
-  );
-}
 
 // ────────────────────────────────────────────────────────────────────────────
 // Counterfactual Scenario Engine — fully functional, data-driven
