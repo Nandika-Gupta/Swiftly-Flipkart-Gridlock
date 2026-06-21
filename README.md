@@ -1,7 +1,7 @@
-# SWIFTLY — Event-Driven Congestion Intelligence for Bengaluru
+# SWIFTLY - Event-Driven Congestion Intelligence for Bengaluru
 
 > **Predict. Deploy. Divert.**
-> An operational command surface that forecasts the traffic impact of planned and unplanned events *before* congestion occurs — built on 8,173 real ASTraM event records, Bengaluru Traffic Police (BTP) historical statistics and MapMyIndia corridor intelligence.
+> An operational command surface that forecasts the traffic impact of planned and unplanned events *before* congestion occurs - built on 8,173 real ASTraM event records, Bengaluru Traffic Police (BTP) historical statistics and MapMyIndia corridor intelligence.
 
 ---
 
