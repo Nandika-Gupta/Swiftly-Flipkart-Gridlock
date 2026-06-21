@@ -80,13 +80,13 @@ All data shipped with this repo is **real, not synthetic**:
 
 ## Tech stack
 
-- **Framework** — React 19, SSR, file-based routing
-- **Bundler** — Vite 7
-- **Styling** — Tailwind CSS v4 + custom design tokens
-- **UI Primitives** — Radix UI + shadcn/ui
-- **Data** — Static JSON snapshots in `public/data/`
-- **AI Copilot** — Server function calling an OpenAI-compatible gateway via `@ai-sdk/openai-compatible`
-- **Operations Center** — Pre-bundled standalone HTML (`public/swiftly.html`) so the 3D map surface loads independently of the SPA shell
+- **Framework** - React 19, SSR, file-based routing
+- **Bundler** - Vite 7
+- **Styling** - Tailwind CSS v4 + custom design tokens
+- **UI Primitives** - Radix UI + shadcn/ui
+- **Data** - Static JSON snapshots in `public/data/`
+- **AI Copilot** - Server function calling an OpenAI-compatible gateway via `@ai-sdk/openai-compatible`
+- **Operations Center** - Pre-bundled standalone HTML (`public/swiftly.html`) so the 3D map surface loads independently of the SPA shell
 
 ---
 
