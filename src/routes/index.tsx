@@ -222,100 +222,68 @@ function SwiftlyShell() {
         </section>
       </main>
 
-      <section id="pipeline" className="swf-pipeline">
-        <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— THE EVITAS PIPELINE</span>
-          <h2 className="swf-section-title">From raw event to deployed officer in three stages.</h2>
-        </div>
-        <div className="swf-stages">
-          <Stage
-            n="01"
-            title="DR Learner"
-            sub="Causal Counterfactuals"
-            body="A doubly-robust estimator (econml.DRLearner) computes the causal_delta for every event — the counterfactual congestion impact had the event not occurred. Trained on 8,173 ASTraM records across 18 months."
-            stack="LightGBM · EconML · 18 months"
-          />
-          <Stage
-            n="02"
-            title="EVITAS Score"
-            sub="0–100 Event Impact"
-            body="Fuses causal_delta, severity_score, corridor closure_rate, and time-of-day factor into a single 0–100 score. Banded into GREEN (0–39), YELLOW (40–59), ORANGE (60–79), RED (80–100) for instant operational triage."
-            stack="Weighted normalization · Per-event"
-          />
-          <Stage
-            n="03"
-            title="ILP Optimizer"
-            sub="Manpower Allocation"
-            body="Given N officers available, solves an integer linear program to minimize total weighted risk across corridors, guaranteeing minimum coverage for every RED and ORANGE corridor. SciPy linprog backend."
-            stack="scipy.optimize · Real-time"
-          />
-        </div>
-      </section>
-
-      {/* PROBLEM STATEMENT */}
+      {/* PROBLEM + SOLUTION — compact */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— PROBLEM STATEMENT</span>
+          <span className="swf-section-eyebrow">— OPERATIONAL CONTEXT</span>
           <h2 className="swf-section-title">Event-driven congestion is reactive, manual, and unmeasured.</h2>
         </div>
         <div className="swf-problem-grid">
           <div className="swf-problem-card">
-            <div className="swf-problem-tag">OPERATIONAL CHALLENGE</div>
-            <p>Political rallies, festivals, sports events, processions, VIP movements, construction, breakdowns, accidents, waterlogging, and sudden gatherings create localized traffic breakdowns across Bengaluru.</p>
+            <div className="swf-problem-tag">PROBLEM</div>
+            <p>Rallies, processions, VIP movement, accidents and waterlogging create localized breakdowns across Bengaluru — every day.</p>
           </div>
           <div className="swf-problem-card">
-            <div className="swf-problem-tag">WHY IT&apos;S HARD TODAY</div>
-            <ul className="swf-problem-list">
-              <li>Event impact is not quantified in advance.</li>
-              <li>Resource deployment is experience-driven.</li>
-              <li>Officers are deployed reactively, not predictively.</li>
-              <li>Diversion plans are manually drafted.</li>
-              <li>No structured post-event learning system.</li>
-            </ul>
+            <div className="swf-problem-tag">CURRENT REALITY</div>
+            <p>Impact isn&apos;t quantified ahead of time. Officers are deployed reactively. Diversion plans are drafted by hand.</p>
           </div>
           <div className="swf-problem-card swf-problem-card-accent">
             <div className="swf-problem-tag">SWIFTLY&apos;S ANSWER</div>
-            <p>Forecast event impact <em>before</em> congestion occurs. Recommend optimal manpower, barricading, and diversion plans grounded in 8,173 historical ASTRaM events.</p>
+            <p>Forecast event impact <em>before</em> congestion. Optimize manpower &amp; diversions on 8,173 real ASTRaM events.</p>
           </div>
         </div>
       </section>
 
-      {/* EVITAS FRAMEWORK */}
-      <section className="swf-section">
+      {/* HOW SWIFTLY WORKS — visual pipeline */}
+      <section id="pipeline" className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— EVITAS FRAMEWORK</span>
-          <h2 className="swf-section-title">Event Vulnerability & Impact Traffic Assessment Score.</h2>
-          <p className="swf-section-lede">A single 0–100 number that triages every event into a clear operational band — from passive monitoring to full diversion activation.</p>
+          <span className="swf-section-eyebrow">— HOW SWIFTLY WORKS</span>
+          <h2 className="swf-section-title">Five operational stages. Raw event to deployed officer.</h2>
         </div>
-        <div className="swf-bands">
-          <BandCard band="green" range="0–39" label="GREEN" headline="Normal monitoring" body="Passive observation. No additional deployment. Routine corridor flow tracking." />
-          <BandCard band="yellow" range="40–59" label="YELLOW" headline="Heightened awareness" body="Brief field units. Verify corridor sensors. Prepare standby officers." />
-          <BandCard band="orange" range="60–79" label="ORANGE" headline="Pre-deploy officers" body="Activate ILP optimizer. Position officers at predicted choke points before peak window." />
-          <BandCard band="red" range="80–100" label="RED" headline="Activate diversion" body="Trigger full diversion plan. Barricade staging. Real-time corridor reroute via MapMyIndia." />
+        <div className="swf-flow">
+          <FlowNode n="01" title="ASTRaM Event" sub="Ingest" />
+          <FlowArrow />
+          <FlowNode n="02" title="DR Learner" sub="Counterfactual" />
+          <FlowArrow />
+          <FlowNode n="03" title="EVITAS Engine" sub="0–100 Score" accent />
+          <FlowArrow />
+          <FlowNode n="04" title="ILP Optimizer" sub="Allocate Officers" />
+          <FlowArrow />
+          <FlowNode n="05" title="Diversion Plan" sub="Deploy" />
         </div>
       </section>
 
-      {/* TOP RISK CORRIDORS */}
+      {/* LIVE CORRIDOR INTELLIGENCE */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— LIVE INTELLIGENCE · TOP RISK CORRIDORS</span>
-          <h2 className="swf-section-title">Bengaluru&apos;s highest-vulnerability corridors, ranked.</h2>
+          <span className="swf-section-eyebrow">— LIVE CORRIDOR INTELLIGENCE</span>
+          <h2 className="swf-section-title">Top vulnerable corridors, ranked in real time.</h2>
         </div>
         <div className="swf-risk-grid">
           <RiskCorridor rank="01" name="Varthur Road" evitas="61.5" officers="8" band="orange" />
           <RiskCorridor rank="02" name="Mysore Road" evitas="57.0" officers="6" band="yellow" />
           <RiskCorridor rank="03" name="CBD 1" evitas="53.4" officers="5" band="yellow" />
           <RiskCorridor rank="04" name="ORR North 1" evitas="52.4" officers="4" band="yellow" />
-          <RiskCorridor rank="05" name="Airport New South Road" evitas="51.0" officers="4" band="yellow" />
+          <RiskCorridor rank="05" name="Airport New South Rd" evitas="51.0" officers="4" band="yellow" />
         </div>
       </section>
 
-      {/* DEPLOYMENT OPTIMIZER */}
+      {/* DEPLOYMENT INTELLIGENCE */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— DEPLOYMENT OPTIMIZER</span>
-          <h2 className="swf-section-title">AI-powered officer deployment planning.</h2>
-          <p className="swf-section-lede">30 officers allocated across Bengaluru corridors based on EVITAS, historical density, closure probability, counterfactual impact, and corridor vulnerability.</p>
+          <span className="swf-section-eyebrow">— DEPLOYMENT INTELLIGENCE</span>
+          <h2 className="swf-section-title">30 officers, optimally allocated.</h2>
+          <p className="swf-section-lede">ILP-driven allocation across EVITAS, historical density, vulnerability and causal impact.</p>
         </div>
         <div className="swf-deploy-grid">
           <div className="swf-deploy-bars">
@@ -340,91 +308,65 @@ function SwiftlyShell() {
             <div className="swf-deploy-big">30</div>
             <div className="swf-deploy-big-label">Officers · ILP-allocated</div>
             <ul className="swf-deploy-points">
-              <li><span>—</span> Minimum coverage guaranteed for all RED &amp; ORANGE corridors.</li>
-              <li><span>—</span> Total weighted spillover risk minimized via SciPy linprog.</li>
-              <li><span>—</span> Re-solves in &lt; 1.2 s on corridor state change.</li>
+              <li><span>—</span> Min coverage for every RED &amp; ORANGE corridor.</li>
+              <li><span>—</span> Weighted spillover minimized via SciPy linprog.</li>
+              <li><span>—</span> Re-solves in &lt; 1.2 s on state change.</li>
             </ul>
           </div>
         </div>
       </section>
 
-      {/* COUNTERFACTUAL */}
+      {/* COUNTERFACTUAL — two scenarios */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— COUNTERFACTUAL ENGINE</span>
-          <h2 className="swf-section-title">&ldquo;What if?&rdquo; traffic simulation, grounded in causal inference.</h2>
+          <span className="swf-section-eyebrow">— COUNTERFACTUAL SIMULATOR</span>
+          <h2 className="swf-section-title">&ldquo;What if?&rdquo; — grounded in causal inference.</h2>
         </div>
         <div className="swf-scenario-grid">
-          <Scenario q="What if a protest occurs on ORR East?" baseline="EVITAS 38" projected="EVITAS 74" delta="+36" tone="red" rec="Pre-deploy 6 officers · barricade 2 junctions" />
-          <Scenario q="What if the procession is rerouted via Hosur Rd?" baseline="EVITAS 71" projected="EVITAS 49" delta="−22" tone="green" rec="Issue diversion · save ~14 min recovery" />
-          <Scenario q="What if we add 4 officers to Varthur?" baseline="EVITAS 61.5" projected="EVITAS 44" delta="−17.5" tone="green" rec="Approve · within manpower budget" />
-          <Scenario q="What if Mysore Rd closure is avoided?" baseline="EVITAS 57" projected="EVITAS 33" delta="−24" tone="green" rec="Negotiate phased closure window" />
+          <Scenario q="What if a political rally occurs on ORR East?" baseline="EVITAS 38" projected="EVITAS 74" delta="+36" tone="red" rec="Pre-deploy 6 officers · barricade 2 junctions" />
+          <Scenario q="What if 4 additional officers are deployed on Varthur Road?" baseline="EVITAS 61.5" projected="EVITAS 44" delta="−17.5" tone="green" rec="Approve · within manpower budget" />
         </div>
       </section>
 
-      {/* GLOBAL RESEARCH */}
+      {/* PARTNERS & REAL DATA */}
       <section className="swf-section">
         <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— GLOBAL RESEARCH BENCHMARK</span>
-          <h2 className="swf-section-title">What the world&apos;s most advanced cities taught us.</h2>
-        </div>
-        <div className="swf-global-grid">
-          <Country flag="🇯🇵" name="Japan" lesson="VICS · smart routing · event traffic coordination." />
-          <Country flag="🇸🇬" name="Singapore" lesson="Virtual Singapore digital twin · agent-based simulation." />
-          <Country flag="🇨🇳" name="China" lesson="Alibaba City Brain · AI traffic orchestration." />
-          <Country flag="🇳🇱" name="Netherlands" lesson="Predictive corridor management." />
-          <Country flag="🇺🇸" name="United States" lesson="Event mobility command systems." />
-        </div>
-        <div className="swf-global-conclude">
-          SWIFTLY brings these concepts to Bengaluru — built natively on ASTRaM data, tuned for Indian traffic realities.
-        </div>
-      </section>
-
-      {/* PARTNERS */}
-      <section className="swf-section">
-        <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— DATA & PARTNERSHIP STACK</span>
+          <span className="swf-section-eyebrow">— PARTNERS &amp; REAL DATA</span>
           <h2 className="swf-section-title">Built on real Bengaluru traffic intelligence.</h2>
         </div>
-        <div className="swf-partner-grid">
+        <div className="swf-realdata-strip">
+          <div><div className="swf-rd-v">8,173</div><div className="swf-rd-l">Real Events</div></div>
+          <div><div className="swf-rd-v">23</div><div className="swf-rd-l">Corridors</div></div>
+          <div><div className="swf-rd-v">18</div><div className="swf-rd-l">Months Data</div></div>
+          <div><div className="swf-rd-v swf-rd-accent">REAL</div><div className="swf-rd-l">Not Synthetic</div></div>
+        </div>
+        <div className="swf-partner-grid" style={{ marginTop: 18 }}>
           <div className="swf-partner-card swf-partner-astram">
             <div className="swf-partner-mark">BTP</div>
             <div className="swf-partner-name">Bengaluru Traffic Police · ASTRaM</div>
-            <p>Real operational event data. Historical traffic patterns. Corridor intelligence. Event taxonomies. <strong>Not synthetic — real Bengaluru traffic events.</strong></p>
-            <div className="swf-partner-stats">
-              <span>8,173 events</span><span>22 corridors</span><span>18 months</span>
-            </div>
+            <p>Real operational event data. Historical patterns. Corridor intelligence. <strong>Not synthetic.</strong></p>
           </div>
           <div className="swf-partner-card swf-partner-mmi">
             <div className="swf-partner-mark">MMI</div>
             <div className="swf-partner-name">MapMyIndia</div>
-            <p>Corridor visualization. Route intelligence. Diversion planning. Geospatial operations across the 3D command surface.</p>
-            <div className="swf-partner-stats">
-              <span>3D base map</span><span>Route API</span><span>Geofencing</span>
-            </div>
+            <p>Corridor visualization, route intelligence and diversion planning across the 3D command surface.</p>
           </div>
         </div>
       </section>
 
-      {/* AI COPILOT — secondary module */}
-      <section className="swf-section">
-        <div className="swf-section-head">
-          <span className="swf-section-eyebrow">— AI COPILOT · SECONDARY MODULE</span>
-          <h2 className="swf-section-title">Natural-language access to the EVITAS ledger.</h2>
-          <p className="swf-section-lede">Ask in plain English. Responses are grounded in live Swiftly metrics — corridors, EVITAS, counterfactuals, deployment plans.</p>
-        </div>
-        <div className="swf-copilot-grid">
-          {[
-            "Which corridor is most vulnerable today?",
-            "What happens if crowd size on MG Road increases by 20%?",
-            "Recommend a deployment plan for tomorrow's VIP movement.",
-            "Generate a diversion strategy for Varthur Road, 6–8 PM.",
-          ].map((q) => (
-            <div className="swf-copilot-card" key={q}>
-              <div className="swf-copilot-q">&ldquo;{q}&rdquo;</div>
-              <div className="swf-copilot-grounded">Grounded in EVITAS · ILP · DR Learner</div>
-            </div>
-          ))}
+      {/* TRANSITION TO COMMAND CENTER */}
+      <section className="swf-section swf-transition">
+        <div className="swf-transition-inner">
+          <div className="swf-eyebrow"><span className="swf-eyebrow-line" /> MISSION CONTROL · ONLINE</span>
+          <h2 className="swf-transition-title">Ready to enter Bengaluru&apos;s Traffic Command Center?</h2>
+          <div className="swf-transition-feats">
+            <div><span className="swf-dot swf-dot-green" /> Live EVITAS</div>
+            <div><span className="swf-dot swf-dot-blue" /> Live Deployment</div>
+            <div><span className="swf-dot swf-dot-green" /> Real-Time Event Simulation</div>
+          </div>
+          <button className="swf-cta-primary swf-cta-xl" onClick={() => setEntered(true)}>
+            ENTER COMMAND CENTER <span className="swf-cta-arrow">→</span>
+          </button>
         </div>
       </section>
 
@@ -434,6 +376,19 @@ function SwiftlyShell() {
       </footer>
     </div>
   );
+}
+
+function FlowNode({ n, title, sub, accent }: { n: string; title: string; sub: string; accent?: boolean }) {
+  return (
+    <div className={`swf-flow-node ${accent ? "is-accent" : ""}`}>
+      <div className="swf-flow-n">{n}</div>
+      <div className="swf-flow-title">{title}</div>
+      <div className="swf-flow-sub">{sub}</div>
+    </div>
+  );
+}
+function FlowArrow() {
+  return <div className="swf-flow-arrow">→</div>;
 }
 
 function Stat({ value, label, sub }: { value: string; label: string; sub: string }) {
