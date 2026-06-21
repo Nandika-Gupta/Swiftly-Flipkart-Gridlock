@@ -279,105 +279,47 @@ function SwiftlyShell() {
           </section>
 
           <section className="swf-command-grid">
-            <div className="swf-preview-panel">
-              <div className="swf-panel-head">
-                <div>
-                  <div className="swf-panel-eyebrow">Command center surface</div>
-                  <h2 className="swf-panel-title">Swiftly operational modules</h2>
-                </div>
-                <div className="swf-panel-chip">3D map retained</div>
+            <div className="swf-card swf-card-strong">
+              <div className="swf-card-head">
+                <span className="swf-card-title">CORRIDOR LEADERBOARD</span>
+                <span className="swf-card-sub">Live · ranked by EVITAS risk</span>
               </div>
-
-              <div className="swf-module-tabs">
-                {commandTabs.map((tab, index) => (
-                  <button key={tab} className={`swf-module-tab ${index === 0 ? "is-active" : ""}`} type="button">
-                    {tab}
-                  </button>
-                ))}
+              <div className="swf-corr-list">
+                {topFour.map((c) => {
+                  const s = scoreOf(c);
+                  const band = s >= 80 ? "red" : s >= 60 ? "orange" : s >= 40 ? "yellow" : "green";
+                  return (
+                    <div className="swf-corr" key={c.corridor_name}>
+                      <div className="swf-corr-rank">#{c.risk_rank ?? "—"}</div>
+                      <div className="swf-corr-info">
+                        <div className="swf-corr-name">{c.corridor_name}</div>
+                        <div className="swf-corr-meta">
+                          {c.event_count ?? 0} events · closure {((c.closure_rate ?? 0) * 100).toFixed(1)}%
+                        </div>
+                      </div>
+                      <div className={`swf-corr-score swf-band-${band}`}>{s.toFixed(1)}</div>
+                    </div>
+                  );
+                })}
+                {!topFour.length && <div className="swf-corr-empty">Loading corridor risk data…</div>}
               </div>
-
-              <div className="swf-preview-grid">
-                <div className="swf-map-ghost">
-                  <div className="swf-map-radar" />
-                  <div className="swf-map-ring swf-map-ring-a" />
-                  <div className="swf-map-ring swf-map-ring-b" />
-                  <div className="swf-map-cross swf-map-cross-a" />
-                  <div className="swf-map-cross swf-map-cross-b" />
-                  <div className="swf-map-node" />
+              {top && (
+                <div className="swf-alert">
+                  <div className="swf-alert-tag">▲ TOP RISK</div>
+                  <div className="swf-alert-body">
+                    <strong>{top.corridor_name}</strong> — EVITAS {scoreOf(top).toFixed(1)}. Pre-position officers 9–11 AM and 6–8 PM.
+                  </div>
                 </div>
-
-                <div className="swf-diagnostic-stack">
-                  <IntelCard
-                    title="AI Engine Diagnostics"
-                    accent="cyan"
-                    body={
-                      top
-                        ? `${top.corridor_name} leads current risk index with ${scoreOf(top).toFixed(1)} EVITAS. Field pre-positioning recommended before the evening surge.`
-                        : "Loading active corridor diagnostics from the EVITAS risk ledger."
-                    }
-                  />
-                  <IntelCard
-                    title="Primary Forecast Drivers"
-                    accent="amber"
-                    tags={["Historical traffic pattern", "Closure sensitivity", "Time-window risk"]}
-                  />
-                  <IntelCard
-                    title="Explainability Logs"
-                    accent="green"
-                    list={[
-                      "Forecast anchored to similar historical event clusters.",
-                      "Corridor closure rate materially affects recovery curve.",
-                      "Officer allocation changes are optimized against weighted spillover risk.",
-                    ]}
-                  />
-                </div>
-              </div>
+              )}
             </div>
 
-            <div className="swf-side-stack">
-              <div className="swf-card swf-card-strong">
-                <div className="swf-card-head">
-                  <span className="swf-card-title">CORRIDOR LEADERBOARD</span>
-                  <span className="swf-card-sub">Live · ranked by EVITAS risk</span>
-                </div>
-                <div className="swf-corr-list">
-                  {topFour.map((c) => {
-                    const s = scoreOf(c);
-                    const band = s >= 60 ? "orange" : s >= 40 ? "yellow" : "green";
-                    return (
-                      <div className="swf-corr" key={c.corridor_name}>
-                        <div className="swf-corr-rank">#{c.risk_rank ?? "—"}</div>
-                        <div className="swf-corr-info">
-                          <div className="swf-corr-name">{c.corridor_name}</div>
-                          <div className="swf-corr-meta">
-                            {c.event_count ?? 0} events · closure {((c.closure_rate ?? 0) * 100).toFixed(1)}%
-                          </div>
-                        </div>
-                        <div className={`swf-corr-score swf-band-${band}`}>{s.toFixed(1)}</div>
-                      </div>
-                    );
-                  })}
-                  {!topFour.length && <div className="swf-corr-empty">Loading corridor risk data…</div>}
-                </div>
-                {top && (
-                  <div className="swf-alert">
-                    <div className="swf-alert-tag">▲ TOP RISK</div>
-                    <div className="swf-alert-body">
-                      <strong>{top.corridor_name}</strong> — risk score {scoreOf(top).toFixed(1)}. Recommend pre-positioning
-                      officers during 9–11 AM and 6–8 PM windows.
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="swf-plan-card">
-                <div className="swf-plan-kicker">Response plan engine</div>
-                <div className="swf-plan-title">Minimum safe, balanced, and aggressive deployment options</div>
-                <div className="swf-plan-list">
-                  <PlanRow tone="amber" title="Minimum Safe Deployment" officers="8 officers" detail="4 checkpoints · 94 min horizon" />
-                  <PlanRow tone="blue" title="Recommended Deployment" officers="11 officers" detail="5 checkpoints · 88 min horizon" />
-                  <PlanRow tone="red" title="Aggressive Deployment" officers="15 officers" detail="7 checkpoints · 84 min horizon" />
-                </div>
+            <div className="swf-plan-card">
+              <div className="swf-plan-kicker">Response plan engine</div>
+              <div className="swf-plan-title">Minimum safe, balanced, and aggressive deployment</div>
+              <div className="swf-plan-list">
+                <PlanRow tone="amber" title="Minimum Safe" officers="8 officers" detail="4 checkpoints · 94 min horizon" />
+                <PlanRow tone="blue" title="Recommended" officers="11 officers" detail="5 checkpoints · 88 min horizon" />
+                <PlanRow tone="red" title="Aggressive" officers="15 officers" detail="7 checkpoints · 84 min horizon" />
               </div>
             </div>
           </section>
