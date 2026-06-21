@@ -115,7 +115,7 @@ function SwiftlyLanding() {
           </div>
           <div className="swf-cta-row">
             <a href="/swiftly.html" className="swf-cta-primary" rel="noopener">
-              ENTER COMMAND CENTER<span className="swf-cta-arrow">→</span>
+              LAUNCH OPERATIONS CENTER<span className="swf-cta-arrow">→</span>
             </a>
             <a className="swf-cta-secondary" href="#capabilities">VIEW CAPABILITIES</a>
           </div>
