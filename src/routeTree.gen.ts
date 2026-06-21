@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SwiftlyResponseRouteImport } from './routes/swiftly.response'
 import { Route as SwiftlyIntelligenceRouteImport } from './routes/swiftly.intelligence'
 import { Route as SwiftlyDeploymentRouteImport } from './routes/swiftly.deployment'
 import { Route as SwiftlyCorridorsRouteImport } from './routes/swiftly.corridors'
@@ -18,6 +19,11 @@ import { Route as ApiCopilotRouteImport } from './routes/api/copilot'
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyResponseRoute = SwiftlyResponseRouteImport.update({
+  id: '/swiftly/response',
+  path: '/swiftly/response',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SwiftlyIntelligenceRoute = SwiftlyIntelligenceRouteImport.update({
@@ -47,6 +53,7 @@ export interface FileRoutesByFullPath {
   '/swiftly/corridors': typeof SwiftlyCorridorsRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
   '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
+  '/swiftly/response': typeof SwiftlyResponseRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -54,6 +61,7 @@ export interface FileRoutesByTo {
   '/swiftly/corridors': typeof SwiftlyCorridorsRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
   '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
+  '/swiftly/response': typeof SwiftlyResponseRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -62,6 +70,7 @@ export interface FileRoutesById {
   '/swiftly/corridors': typeof SwiftlyCorridorsRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
   '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
+  '/swiftly/response': typeof SwiftlyResponseRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -71,6 +80,7 @@ export interface FileRouteTypes {
     | '/swiftly/corridors'
     | '/swiftly/deployment'
     | '/swiftly/intelligence'
+    | '/swiftly/response'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -78,6 +88,7 @@ export interface FileRouteTypes {
     | '/swiftly/corridors'
     | '/swiftly/deployment'
     | '/swiftly/intelligence'
+    | '/swiftly/response'
   id:
     | '__root__'
     | '/'
@@ -85,6 +96,7 @@ export interface FileRouteTypes {
     | '/swiftly/corridors'
     | '/swiftly/deployment'
     | '/swiftly/intelligence'
+    | '/swiftly/response'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -93,6 +105,7 @@ export interface RootRouteChildren {
   SwiftlyCorridorsRoute: typeof SwiftlyCorridorsRoute
   SwiftlyDeploymentRoute: typeof SwiftlyDeploymentRoute
   SwiftlyIntelligenceRoute: typeof SwiftlyIntelligenceRoute
+  SwiftlyResponseRoute: typeof SwiftlyResponseRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -102,6 +115,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/response': {
+      id: '/swiftly/response'
+      path: '/swiftly/response'
+      fullPath: '/swiftly/response'
+      preLoaderRoute: typeof SwiftlyResponseRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/swiftly/intelligence': {
@@ -141,6 +161,7 @@ const rootRouteChildren: RootRouteChildren = {
   SwiftlyCorridorsRoute: SwiftlyCorridorsRoute,
   SwiftlyDeploymentRoute: SwiftlyDeploymentRoute,
   SwiftlyIntelligenceRoute: SwiftlyIntelligenceRoute,
+  SwiftlyResponseRoute: SwiftlyResponseRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
