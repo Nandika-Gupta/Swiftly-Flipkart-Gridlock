@@ -326,7 +326,7 @@ function SwiftlyShell() {
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— COUNTERFACTUAL SCENARIO ENGINE</span>
           <h2 className="swf-section-title">Simulate event impact. See EVITAS, delay, recovery & deployment update live.</h2>
-          <p className="swf-section-lede">Drive every parameter directly. Outputs are computed from your inputs and the real ASTraM corridor &amp; counterfactual datasets — not pre-recorded.</p>
+          <p className="swf-section-lede">Drive every parameter directly. Outputs are computed from your inputs, real ASTraM corridor &amp; counterfactual datasets, and Bengaluru Traffic Police historical statistics — not pre-recorded.</p>
         </div>
         <CounterfactualEngine />
       </section>
