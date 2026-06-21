@@ -151,16 +151,6 @@ function SwiftlyShell() {
           </div>
         </div>
 
-        <div className="swf-entered-bottom">
-          <div className="swf-entered-bottom-label">Standalone Swiftly 3D map preserved</div>
-          <div className="swf-entered-bottom-tabs">
-            {commandTabs.map((tab) => (
-              <span key={tab} className="swf-mini-tab">
-                {tab}
-              </span>
-            ))}
-          </div>
-        </div>
       </div>
     );
   }
