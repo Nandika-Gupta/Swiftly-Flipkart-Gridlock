@@ -10,11 +10,17 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as SwiftlyDeploymentRouteImport } from './routes/swiftly.deployment'
 import { Route as ApiCopilotRouteImport } from './routes/api/copilot'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SwiftlyDeploymentRoute = SwiftlyDeploymentRouteImport.update({
+  id: '/swiftly/deployment',
+  path: '/swiftly/deployment',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ApiCopilotRoute = ApiCopilotRouteImport.update({
@@ -26,27 +32,31 @@ const ApiCopilotRoute = ApiCopilotRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/deployment': typeof SwiftlyDeploymentRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/deployment': typeof SwiftlyDeploymentRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/deployment': typeof SwiftlyDeploymentRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/api/copilot'
+  fullPaths: '/' | '/api/copilot' | '/swiftly/deployment'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/copilot'
-  id: '__root__' | '/' | '/api/copilot'
+  to: '/' | '/api/copilot' | '/swiftly/deployment'
+  id: '__root__' | '/' | '/api/copilot' | '/swiftly/deployment'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiCopilotRoute: typeof ApiCopilotRoute
+  SwiftlyDeploymentRoute: typeof SwiftlyDeploymentRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -56,6 +66,13 @@ declare module '@tanstack/react-router' {
       path: '/'
       fullPath: '/'
       preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/swiftly/deployment': {
+      id: '/swiftly/deployment'
+      path: '/swiftly/deployment'
+      fullPath: '/swiftly/deployment'
+      preLoaderRoute: typeof SwiftlyDeploymentRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/api/copilot': {
@@ -71,6 +88,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiCopilotRoute: ApiCopilotRoute,
+  SwiftlyDeploymentRoute: SwiftlyDeploymentRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
