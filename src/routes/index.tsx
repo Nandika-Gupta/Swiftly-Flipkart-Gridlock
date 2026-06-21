@@ -23,24 +23,33 @@ export const Route = createFileRoute("/")({
 
 type Corridor = {
   corridor_name: string;
-  mean_evitas: number;
-  max_evitas: number;
-  red_events: number;
-  orange_events: number;
-  event_count: number;
-  risk_rank: number;
+  mean_evitas?: number;
+  max_evitas?: number;
+  red_events?: number;
+  orange_events?: number;
+  event_count?: number;
+  risk_rank?: number;
+  risk_score?: number;
+  closure_rate?: number;
+  mean_severity?: number;
 };
 
 function SwiftlyShell() {
   const [entered, setEntered] = useState(false);
   const [corridors, setCorridors] = useState<Corridor[]>([]);
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     fetch("/data/corridors.json")
       .then((r) => r.json())
-      .then((d) => setCorridors(d.slice(0, 8)))
+      .then((d: Corridor[]) => {
+        const sorted = [...d].sort(
+          (a, b) => (a.risk_rank ?? 999) - (b.risk_rank ?? 999),
+        );
+        setCorridors(sorted.slice(0, 8));
+      })
       .catch(() => {});
+    setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
