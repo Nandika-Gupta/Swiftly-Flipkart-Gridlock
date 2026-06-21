@@ -20,25 +20,25 @@ Landing page sells the vision. Operational modules demonstrate the technology.
 
 ## Screenshots
 
-### Landing — vision, EVITAS framework, partners, capabilities
+### Landing - vision, EVITAS framework, partners, capabilities
 ![Landing](docs/screenshots/01_landing.png)
 
-### Operations Center — standalone 3D command surface (event simulation, AI insight, corridor map)
+### Operations Center - standalone 3D command surface (event simulation, AI insight, corridor map)
 ![Operations Center](docs/screenshots/02_operations_center.png)
 
-### Module 01 · Event Intelligence — live ASTraM event stream, EVITAS classification
+### Module 01 · Event Intelligence - live ASTraM event stream, EVITAS classification
 ![Event Intelligence](docs/screenshots/03_event_intelligence.png)
 
-### Module 02 · Operational Scenario Lab — simulate crowd / closure / duration, see deployment update
+### Module 02 · Operational Scenario Lab - simulate crowd / closure / duration, see deployment update
 ![Scenario Lab](docs/screenshots/04_scenario_lab.png)
 
-### Module 03 · Corridor Intelligence — 23 corridors ranked by EVITAS + BTP vulnerability
+### Module 03 · Corridor Intelligence - 23 corridors ranked by EVITAS + BTP vulnerability
 ![Corridor Intelligence](docs/screenshots/05_corridor_intelligence.png)
 
-### Module 04 · Response Planning — five-stage operational playbook
+### Module 04 · Response Planning - five-stage operational playbook
 ![Response Planning](docs/screenshots/06_response_planning.png)
 
-### Module 05 · Command Copilot — plain-English Q&A grounded in ASTraM + BTP data
+### Module 05 · Command Copilot - plain-English Q&A grounded in ASTraM + BTP data
 ![Command Copilot](docs/screenshots/07_command_copilot.png)
 
 ---
@@ -82,7 +82,7 @@ All data shipped with this repo is **real, not synthetic**:
 
 ## Tech stack
 
-- **Framework** — [TanStack Start v1](https://tanstack.com/start) (React 19, SSR, file-based routing)
+- **Framework** — React 19, SSR, file-based routing
 - **Bundler** — Vite 7
 - **Styling** — Tailwind CSS v4 + custom design tokens
 - **UI Primitives** — Radix UI + shadcn/ui
@@ -130,10 +130,6 @@ bun run dev            # or: npm run dev
 bun run build
 bun run preview
 ```
-
-**Optional — Lovable Cloud / Copilot**
-The Command Copilot module calls `/api/copilot` which proxies to an OpenAI-compatible gateway. To enable it, set `LOVABLE_API_KEY` (or your gateway key) in the project's secrets — the rest of the app works fully without it.
-
 ---
 
 ## Routes
@@ -150,30 +146,7 @@ The Command Copilot module calls `/api/copilot` which proxies to an OpenAI-compa
 
 ---
 
-## Push this project to GitHub
 
-Lovable has a first-class two-way GitHub sync.
-
-1. In the Lovable editor, open the **+** menu (bottom-left of the chat) → **GitHub → Connect project**
-2. Authorize the **Lovable GitHub App**
-3. Pick the GitHub account / organization
-4. Click **Create Repository** — Lovable pushes the full codebase and keeps it in two-way sync
-
-After that you can `git clone` the repo, develop locally, and pushes will flow back into Lovable automatically. Full docs: <https://docs.lovable.dev/integrations/github>.
-
----
-
-## Download the source
-
-- **From Lovable** — Code Editor → **Download codebase** (bottom of file tree)
-- **From this repo** — once pushed to GitHub: `Code → Download ZIP`, or `git clone <repo-url>`
-- A pre-built source archive is attached to this delivery as `swiftly-source.zip`
-
----
-
-## Credits
-
-Built with [Lovable](https://lovable.dev). Data partners: **ASTraM**, **Bengaluru Traffic Police**, **MapMyIndia (Mappls)**.
 
 ---
 
