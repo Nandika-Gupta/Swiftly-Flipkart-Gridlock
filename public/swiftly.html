@@ -5,10 +5,14 @@
   <title>Bundled Page</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    body { background: #faf9f5; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, sans-serif; }
-    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 13px/1.4 -apple-system, BlinkMacSystemFont, sans-serif; color: #666; background: #fff; padding: 8px 14px; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,0.12); z-index: 10000; }
-    #__bundler_thumbnail { position: fixed; inset: 0; width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: #faf9f5; z-index: 9999; }
-    #__bundler_thumbnail svg { width: 100%; height: 100%; object-fit: contain; }
+    body { background: #060912; display: flex; align-items: center; justify-content: center; min-height: 100vh; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; color: #cfd9ee; }
+    #__bundler_loading { position: fixed; bottom: 20px; right: 20px; font: 11px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; color: #4fd1ff; background: rgba(7,17,29,.85); border: 1px solid rgba(79,209,255,.25); padding: 6px 12px; border-radius: 6px; letter-spacing: 1.5px; text-transform: uppercase; z-index: 10000; }
+    #__bundler_thumbnail { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 26px; background: radial-gradient(circle at 50% 40%, #0b1424 0%, #060912 70%); z-index: 9999; }
+    #__bundler_thumbnail .swf-mark { font-size: 36px; font-weight: 900; letter-spacing: 0.4em; color: #fff; text-shadow: 0 0 24px rgba(79,209,255,.5); }
+    #__bundler_thumbnail .swf-sub { font-size: 11px; letter-spacing: 0.35em; color: #4fd1ff; text-transform: uppercase; }
+    #__bundler_thumbnail .swf-bar { width: 220px; height: 2px; background: rgba(79,209,255,.15); overflow: hidden; border-radius: 2px; }
+    #__bundler_thumbnail .swf-bar i { display: block; width: 40%; height: 100%; background: linear-gradient(90deg, transparent, #4fd1ff, transparent); animation: swfslide 1.2s linear infinite; }
+    @keyframes swfslide { 0% { transform: translateX(-100%);} 100% { transform: translateX(350%);} }
     #__bundler_placeholder { color: #999; font-size: 14px; }
   </style>
   <noscript>
@@ -20,9 +24,11 @@
 </head>
 <body>
   <div id="__bundler_thumbnail">
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><rect width="100" height="100" fill="#080B12"></rect><g transform="translate(50 50)"><circle r="20" fill="none" stroke="#EF4444" stroke-width="2" opacity="0.7"></circle><circle r="11" fill="none" stroke="#F59E0B" stroke-width="2" opacity="0.8"></circle><circle r="4" fill="#EF4444"></circle><path d="M-30 8 L-8 -2 L10 6 L30 -8" fill="none" stroke="#06B6D4" stroke-width="2.4" stroke-linecap="round"></path><path d="M0 -34 L7 -20 L0 -24 L-7 -20 Z" fill="#6366F1"></path></g></svg>
+    <div class="swf-mark">SWIFTLY</div>
+    <div class="swf-sub">Operations Center · Initializing</div>
+    <div class="swf-bar"><i></i></div>
 </div>
-  <div id="__bundler_loading">Unpacking...</div>
+  <div id="__bundler_loading">Booting command surface…</div>
 
   <script>
     
