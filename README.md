@@ -9,10 +9,10 @@
 
 **Dark, high-density command-center aesthetic** in the spirit of modern public-safety operations dashboards (Drishti / Palantir Gotham style).
 
-- **Palette** — Deep navy/space `#060912` → `#0b1424` surfaces, cyan `#4fd1ff` signal accents, EVITAS band colors (green / yellow / orange / red) for risk severity, amber CTA `#ff8c42`.
-- **Typography** — System UI stack with monospace numerals for metrics; uppercase eyebrows with wide letter-spacing for section structure.
-- **Motion** — Subtle radial glows, animated scan bars on loading, hover lifts on capability cards. No frivolous animation.
-- **Density** — Inspired by real traffic-ops control rooms: information-rich panels, no marketing whitespace inside operational modules.
+- **Palette** - Deep navy/space `#060912` → `#0b1424` surfaces, cyan `#4fd1ff` signal accents, EVITAS band colors (green / yellow / orange / red) for risk severity, amber CTA `#ff8c42`.
+- **Typography** - System UI stack with monospace numerals for metrics; uppercase eyebrows with wide letter-spacing for section structure.
+- **Motion** - Subtle radial glows, animated scan bars on loading, hover lifts on capability cards. No frivolous animation.
+- **Density** - Inspired by real traffic-ops control rooms: information-rich panels, no marketing whitespace inside operational modules.
 
 Landing page sells the vision. Operational modules demonstrate the technology.
 
@@ -59,10 +59,10 @@ Landing page sells the vision. Operational modules demonstrate the technology.
 
 | Band | Range | Posture |
 |------|-------|---------|
-| Green | 0–34 | Normal — standard rotation |
-| Yellow | 35–54 | Watch — pre-position spotters |
-| Orange | 55–74 | Elevated — activate diversion, reserves on standby |
-| Red | 75–100 | Critical — full deployment, public advisory, real-time re-scoring |
+| Green | 0–34 | Normal - standard rotation |
+| Yellow | 35–54 | Watch - pre-position spotters |
+| Orange | 55–74 | Elevated - activate diversion, reserves on standby |
+| Red | 75–100 | Critical - full deployment, public advisory, real-time re-scoring |
 
 ---
 
@@ -75,8 +75,6 @@ All data shipped with this repo is **real, not synthetic**:
 | **ASTraM Event Data** | 8,173 Bengaluru event records · 23 corridors · 18 months | `public/data/events.json`, `public/data/counterfactuals.json` |
 | **Bengaluru Traffic Police (BTP)** | Historical statistics — accidents, incidents, congestion index, peak windows. Used as historical risk factors, not real-time feeds | `public/data/btp_stats.json` |
 | **MapMyIndia** | Corridor visualization, route intelligence, diversion planning surface | Embedded in the standalone Operations Center bundle |
-
-> **Note on what's *not* in scope:** This is an operational intelligence surface built on the open data above. It does **not** include a calibrated SUMO/CityFlow microsimulator, per-link real-time speed feeds (Google/TomTom/HERE), live BTP loop-detector feeds, intervention logs, or matched outcome labels. Those would be required for a full MARL training loop and are not in any open release.
 
 ---
 
