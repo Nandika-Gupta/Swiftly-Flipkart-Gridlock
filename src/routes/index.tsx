@@ -639,6 +639,55 @@ function PlanRow({
   );
 }
 
+function BandCard({ band, range, label, headline, body }: { band: "green" | "yellow" | "orange" | "red"; range: string; label: string; headline: string; body: string }) {
+  return (
+    <div className={`swf-band-card swf-bcard-${band}`}>
+      <div className="swf-bcard-top">
+        <span className="swf-bcard-range">{range}</span>
+        <span className="swf-bcard-label">{label}</span>
+      </div>
+      <div className="swf-bcard-headline">{headline}</div>
+      <p className="swf-bcard-body">{body}</p>
+    </div>
+  );
+}
+
+function RiskCorridor({ rank, name, evitas, officers, band }: { rank: string; name: string; evitas: string; officers: string; band: "green" | "yellow" | "orange" | "red" }) {
+  return (
+    <div className="swf-risk-card">
+      <div className="swf-risk-rank">#{rank}</div>
+      <div className="swf-risk-name">{name}</div>
+      <div className={`swf-risk-evitas swf-rband-${band}`}>EVITAS {evitas}</div>
+      <div className="swf-risk-officers">{officers} officers recommended</div>
+    </div>
+  );
+}
+
+function Scenario({ q, baseline, projected, delta, tone, rec }: { q: string; baseline: string; projected: string; delta: string; tone: "red" | "green"; rec: string }) {
+  return (
+    <div className="swf-scenario">
+      <div className="swf-scenario-q">{q}</div>
+      <div className="swf-scenario-row">
+        <div><div className="swf-scenario-lbl">Baseline</div><div className="swf-scenario-val">{baseline}</div></div>
+        <div className="swf-scenario-arrow">→</div>
+        <div><div className="swf-scenario-lbl">Projected</div><div className="swf-scenario-val">{projected}</div></div>
+        <div className={`swf-scenario-delta swf-delta-${tone}`}>{delta}</div>
+      </div>
+      <div className="swf-scenario-rec">▸ {rec}</div>
+    </div>
+  );
+}
+
+function Country({ flag, name, lesson }: { flag: string; name: string; lesson: string }) {
+  return (
+    <div className="swf-country">
+      <div className="swf-country-flag">{flag}</div>
+      <div className="swf-country-name">{name}</div>
+      <div className="swf-country-lesson">{lesson}</div>
+    </div>
+  );
+}
+
 const css = `
 .swf-landing{position:relative;min-height:100vh;overflow:hidden;background:#07111d;color:#e8edf7;font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
 .swf-grid-bg{position:fixed;inset:0;background-image:linear-gradient(rgba(77,118,177,.07) 1px,transparent 1px),linear-gradient(90deg,rgba(77,118,177,.07) 1px,transparent 1px);background-size:72px 72px;mask-image:radial-gradient(circle at 40% 20%,#000 0%,transparent 78%);pointer-events:none;z-index:0}
