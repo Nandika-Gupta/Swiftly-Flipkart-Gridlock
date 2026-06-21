@@ -4,7 +4,7 @@
 
 ### Event-Driven Congestion Intelligence for Bengaluru
 
-*A predictive command-center for event-driven traffic — forecasting congestion impact and recommending officer deployment, barricading and diversion plans **before** congestion even starts.*
+*A predictive command-center for event-driven traffic - forecasting congestion impact and recommending officer deployment, barricading and diversion plans **before** congestion even starts.*
 
 ![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react&logoColor=white)
 ![TanStack Start](https://img.shields.io/badge/TanStack_Start-v1-FF4154?style=flat-square&logo=react-query&logoColor=white)
@@ -12,7 +12,6 @@
 ![Tailwind](https://img.shields.io/badge/Tailwind-v4-38BDF8?style=flat-square&logo=tailwindcss&logoColor=white)
 ![Radix UI](https://img.shields.io/badge/Radix_UI-shadcn-161618?style=flat-square)
 ![MapMyIndia](https://img.shields.io/badge/MapMyIndia-Corridors-22c55e?style=flat-square)
-![Lovable AI](https://img.shields.io/badge/Lovable_AI-Copilot-ff8c42?style=flat-square)
 
 ![Status](https://img.shields.io/badge/Status-Live%20%26%20Deployed-22c55e?style=flat-square) ![Dataset](https://img.shields.io/badge/Dataset-8%2C173%20events-f59e0b?style=flat-square) ![Corridors](https://img.shields.io/badge/Corridors-23-4fd1ff?style=flat-square) ![Build](https://img.shields.io/badge/Build-Solo%20Hackathon-a855f7?style=flat-square) ![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)
 
@@ -40,7 +39,6 @@
 - [Design Philosophy](#design-philosophy)
 - [Roadmap](#roadmap)
 - [Acknowledgements](#acknowledgements)
-- [License](#license)
 
 ---
 
@@ -187,10 +185,10 @@ All data shipped with this repo is **real, not synthetic**. Raw source CSVs live
 
 | Band | Range | Operational posture |
 |---|---|---|
-| 🟢 Green | 0–34 | Normal — standard rotation |
-| 🟡 Yellow | 35–54 | Watch — pre-position spotters |
-| 🟠 Orange | 55–74 | Elevated — activate diversion, reserves on standby |
-| 🔴 Red | 75–100 | Critical — full deployment, public advisory, real-time re-scoring |
+| 🟢 Green | 0–34 | Normal - standard rotation |
+| 🟡 Yellow | 35–54 | Watch - pre-position spotters |
+| 🟠 Orange | 55–74 | Elevated - activate diversion, reserves on standby |
+| 🔴 Red | 75–100 | Critical - full deployment, public advisory, real-time re-scoring |
 
 ### What's computed for real vs. what's modeled
 
@@ -222,7 +220,7 @@ A transparent, explainable rule engine beats a black-box model trained on 8K spa
                             ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                  CONVERSATIONAL LAYER                       │
-│  Lovable AI Gateway (Gemini) · context-grounded system      │
+│   AI Gateway (Gemini) · context-grounded system      │
 │  prompt injected with live forecast + plan + corridor stats │
 └─────────────────────────────────────────────────────────────┘
                             ▼
@@ -246,7 +244,7 @@ A transparent, explainable rule engine beats a black-box model trained on 8K spa
 | **UI primitives** | Radix UI + shadcn/ui |
 | **Maps** | MapMyIndia (corridor + diversion surface, embedded in standalone bundle) |
 | **Data** | Static JSON snapshots in `public/data/`, raw CSVs in `public/data/raw/` |
-| **AI Copilot** | Lovable AI Gateway via `@ai-sdk/openai-compatible` (Gemini) |
+| **AI Copilot** | AI Gateway via `@ai-sdk/openai-compatible` (Gemini) |
 | **Ops Center** | Pre-bundled standalone `public/swiftly.html` so the 3D map loads independently of the SPA shell |
 
 ---
@@ -281,7 +279,6 @@ docs/screenshots/               # README screenshots
 
 - **Node.js** 20+
 - **Bun** ([install](https://bun.sh)) — or npm / pnpm
-- *(Optional)* A Lovable AI Gateway key for the Command Copilot tab
 
 ### 1. Clone the repo
 
@@ -296,40 +293,18 @@ cd swiftly
 bun install   # or: npm install
 ```
 
-### 3. Set your Copilot key (optional)
-
-```bash
-# macOS / Linux
-export LOVABLE_API_KEY="your-key-here"
-
-# Windows (PowerShell)
-$env:LOVABLE_API_KEY="your-key-here"
-```
-
-The app works fully without this key — only the Command Copilot tab is disabled.
-
-### 4. Run the app
+### 3. Run the app
 
 ```bash
 bun run dev          # http://localhost:8080
 ```
 
-### 5. Production build
+### 4. Production build
 
 ```bash
 bun run build
 bun run preview
 ```
-
----
-
-## Configuration
-
-| Variable | Required | Description |
-|---|---|---|
-| `LOVABLE_API_KEY` | For Command Copilot only | Powers the conversational layer. App works without it — only that tab is disabled. |
-
-Deployed via **Lovable Cloud** — zero-config SSR hosting on the Cloudflare Workers runtime.
 
 ---
 
@@ -365,38 +340,15 @@ Deployed via **Lovable Cloud** — zero-config SSR hosting on the Cloudflare Wor
 
 ---
 
-## Roadmap
-
-| Near-Term | Mid-Term | Long-Term |
-|---|---|---|
-| Live SMS / WhatsApp alerts to field officers on deployment | Integration with live BTP data feeds | Learning loop: model recalibrates from post-event outcomes |
-| Post-event accuracy tracker — forecast vs actual outcome | Real road-network routing (replacing hardcoded diversion paths) | Multi-city expansion beyond Bengaluru |
-| Downloadable PDF response brief for field teams | Multi-incident correlation — detect cascading congestion | Role-based access for control-room hierarchy |
-
----
-
 ## Acknowledgements
 
 - **Flipkart Gridlock Hackathon 2.0** for the problem statement
 - **Bengaluru Traffic Police (BTP)** & the **ASTraM** team behind the source dataset
 - **MapMyIndia** for corridor and diversion surface
-- **Lovable AI Gateway** for fast, low-latency LLM inference powering the Command Copilot
 - The open-source ecosystem — TanStack Start, React, Vite, Tailwind, Radix, shadcn/ui
 
 ---
 
-## License
-
-This project is submitted for hackathon demonstration purposes.
-
-```text
-MIT License — feel free to fork, adapt, and build on this.
-Add a LICENSE file with the full text if open-sourcing beyond the hackathon.
-```
-
----
-
-<div align="center">
 
 **SWIFTLY** — *Towards an Unjammed Bengaluru.*
 
