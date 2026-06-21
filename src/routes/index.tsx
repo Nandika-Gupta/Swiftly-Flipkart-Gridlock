@@ -186,44 +186,6 @@ function SwiftlyShell() {
       </header>
 
       <main className="swf-shell">
-        <aside className="swf-rail">
-          <div className="swf-rail-card swf-rail-brand-card">
-            <div className="swf-rail-mark">◈</div>
-            <div className="swf-rail-title">Swiftly Ops Stack</div>
-            <div className="swf-rail-copy">
-              Field-grade event intelligence for planned, unplanned, and cascading congestion scenarios.
-            </div>
-          </div>
-
-          <div className="swf-rail-section">
-            <div className="swf-rail-kicker">Active command modules</div>
-            <div className="swf-rail-tabs">
-              {commandTabs.map((tab, index) => (
-                <div key={tab} className={`swf-rail-tab ${index === 0 ? "is-active" : ""}`}>
-                  <span className="swf-rail-tab-index">0{index + 1}</span>
-                  <span>{tab}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="swf-rail-section">
-            <div className="swf-rail-kicker">Critical corridors</div>
-            <div className="swf-rail-risks">
-              {topThree.map((c) => (
-                <div key={c.corridor_name} className="swf-rail-risk">
-                  <div>
-                    <div className="swf-rail-risk-name">{c.corridor_name}</div>
-                    <div className="swf-rail-risk-meta">{c.event_count ?? 0} events tracked</div>
-                  </div>
-                  <div className="swf-rail-risk-score">{scoreOf(c).toFixed(1)}</div>
-                </div>
-              ))}
-              {!topThree.length && <div className="swf-corr-empty">Loading corridor risk data…</div>}
-            </div>
-          </div>
-        </aside>
-
         <section className="swf-content">
           <section className="swf-hero-panel">
             <div className="swf-hero-copy">
@@ -232,28 +194,18 @@ function SwiftlyShell() {
                 EVITAS PIPELINE · v2.4 · DEPLOYED
               </div>
               <h1 className="swf-title">
-                Swiftly command intelligence for an
-                <span className="swf-title-accent"> operational Bengaluru.</span>
+                Predict. Deploy. Divert.
+                <span className="swf-title-accent"> Event intelligence for Bengaluru.</span>
               </h1>
               <p className="swf-subtitle">
-                A deployable briefing layer wrapped around the preserved Swiftly standalone map — causal forecasting,
-                corridor vulnerability, scenario simulation, response planning, and AI-assisted field recommendations.
+                Swiftly forecasts event-driven congestion before it happens, then recommends optimal officer deployment and diversion plans — grounded in 8,173 real ASTRaM events.
               </p>
             </div>
 
-            <div className="swf-live-strip">
-              <div className="swf-live-status">
-                <div className="swf-live-status-label">Live posture</div>
-                <div className="swf-live-status-value">Moderate escalation window</div>
-              </div>
-              <div className="swf-live-status-chip">Forecast confidence 82%</div>
-            </div>
-
             <div className="swf-stats swf-stats-tight">
-              <Stat value="8,173" label="ASTraM Events" sub="Analyzed" />
+              <Stat value="8,173" label="ASTRaM Events" sub="Analyzed" />
               <Stat value="23" label="Corridors" sub="Monitored" />
               <Stat value="91.0" label="Peak EVITAS" sub="Mysore Rd · RED" />
-              <Stat value="₹2.4Cr" label="Est. Savings" sub="Officer optimization" />
               <Stat value="82%" label="Confidence" sub="Historical fit" />
             </div>
 
@@ -265,52 +217,6 @@ function SwiftlyShell() {
               <a className="swf-cta-secondary" href="#pipeline">
                 VIEW PIPELINE
               </a>
-            </div>
-          </section>
-
-          <section className="swf-command-grid">
-            <div className="swf-card swf-card-strong">
-              <div className="swf-card-head">
-                <span className="swf-card-title">CORRIDOR LEADERBOARD</span>
-                <span className="swf-card-sub">Live · ranked by EVITAS risk</span>
-              </div>
-              <div className="swf-corr-list">
-                {topFour.map((c) => {
-                  const s = scoreOf(c);
-                  const band = s >= 80 ? "red" : s >= 60 ? "orange" : s >= 40 ? "yellow" : "green";
-                  return (
-                    <div className="swf-corr" key={c.corridor_name}>
-                      <div className="swf-corr-rank">#{c.risk_rank ?? "—"}</div>
-                      <div className="swf-corr-info">
-                        <div className="swf-corr-name">{c.corridor_name}</div>
-                        <div className="swf-corr-meta">
-                          {c.event_count ?? 0} events · closure {((c.closure_rate ?? 0) * 100).toFixed(1)}%
-                        </div>
-                      </div>
-                      <div className={`swf-corr-score swf-band-${band}`}>{s.toFixed(1)}</div>
-                    </div>
-                  );
-                })}
-                {!topFour.length && <div className="swf-corr-empty">Loading corridor risk data…</div>}
-              </div>
-              {top && (
-                <div className="swf-alert">
-                  <div className="swf-alert-tag">▲ TOP RISK</div>
-                  <div className="swf-alert-body">
-                    <strong>{top.corridor_name}</strong> — EVITAS {scoreOf(top).toFixed(1)}. Pre-position officers 9–11 AM and 6–8 PM.
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="swf-plan-card">
-              <div className="swf-plan-kicker">Response plan engine</div>
-              <div className="swf-plan-title">Minimum safe, balanced, and aggressive deployment</div>
-              <div className="swf-plan-list">
-                <PlanRow tone="amber" title="Minimum Safe" officers="8 officers" detail="4 checkpoints · 94 min horizon" />
-                <PlanRow tone="blue" title="Recommended" officers="11 officers" detail="5 checkpoints · 88 min horizon" />
-                <PlanRow tone="red" title="Aggressive" officers="15 officers" detail="7 checkpoints · 84 min horizon" />
-              </div>
             </div>
           </section>
         </section>
