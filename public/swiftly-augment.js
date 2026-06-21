@@ -1,12 +1,30 @@
 // Swiftly augmentation: loads ASTraM/EVITAS data + wires real Copilot to /api/copilot
 (function () {
   // Hide non-functional sidebar nav buttons from the bundled Command Center UI.
-  const hiddenNav = ["Live Events", "Simulation", "Deployment", "Reports"];
-  const hideStyle = document.createElement("style");
-  hideStyle.textContent = hiddenNav
-    .map((t) => `button[data-dc-tpl="17"][title="${t}"] { display: none !important; }`)
-    .join("\n");
-  document.head.appendChild(hideStyle);
+  const HIDDEN_TITLES = new Set(["Live Events", "Simulation", "Deployment", "Reports"]);
+  function hideNavButtons(root) {
+    root.querySelectorAll('button[data-dc-tpl="17"]').forEach((btn) => {
+      const title = btn.getAttribute("title");
+      if (title && HIDDEN_TITLES.has(title)) {
+        btn.style.display = "none";
+        btn.setAttribute("aria-hidden", "true");
+      }
+    });
+  }
+  // Run after bundle DOM swap and on any late renders.
+  function installNavHider() {
+    hideNavButtons(document.body);
+    const observer = new MutationObserver((mutations) => {
+      for (const m of mutations) {
+        for (const node of m.addedNodes) {
+          if (node.nodeType === Node.ELEMENT_NODE) hideNavButtons(node);
+        }
+      }
+    });
+    observer.observe(document.body, { childList: true, subtree: true });
+  }
+  if (document.body) installNavHider();
+  else document.addEventListener("DOMContentLoaded", installNavHider);
 
   window.SWIFTLY_DATA = window.SWIFTLY_DATA || {};
   Promise.all([
