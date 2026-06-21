@@ -1,5 +1,35 @@
 // Swiftly augmentation: loads ASTraM/EVITAS data + wires real Copilot to /api/copilot
 (function () {
+  // Hide non-functional sidebar nav buttons from the bundled Command Center UI.
+  const HIDDEN_TITLES = new Set(["Live Events", "Simulation", "Deployment", "Reports"]);
+  function hideNavButtons() {
+    let found = 0;
+    document.querySelectorAll('button[data-dc-tpl="17"]').forEach((btn) => {
+      const title = btn.getAttribute("title");
+      if (title && HIDDEN_TITLES.has(title)) {
+        btn.style.display = "none";
+        btn.style.pointerEvents = "none";
+        btn.setAttribute("aria-hidden", "true");
+        found++;
+      }
+    });
+    return found;
+  }
+  // Poll across bundle DOM swap and late renders; stop once all four are hidden.
+  let attempts = 0;
+  function pollHideNav() {
+    attempts++;
+    const hidden = hideNavButtons();
+    if (hidden < HIDDEN_TITLES.size && attempts < 120) {
+      requestAnimationFrame(pollHideNav);
+    }
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", pollHideNav);
+  } else {
+    pollHideNav();
+  }
+
   window.SWIFTLY_DATA = window.SWIFTLY_DATA || {};
   Promise.all([
     fetch("/data/corridors.json").then((r) => r.json()).catch(() => []),
