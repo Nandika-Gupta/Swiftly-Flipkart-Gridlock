@@ -88,8 +88,10 @@ function SwiftlyShell() {
   }
 
   const top = corridors[0];
-  const timeStr = now.toLocaleTimeString("en-IN", { hour12: false });
-  const dateStr = now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  const timeStr = now ? now.toLocaleTimeString("en-IN", { hour12: false }) : "—— : —— : ——";
+  const dateStr = now ? now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+  const scoreOf = (c: Corridor) =>
+    c.mean_evitas ?? (c.risk_score != null ? c.risk_score * 100 : 0);
 
   return (
     <div className="swf-landing">
