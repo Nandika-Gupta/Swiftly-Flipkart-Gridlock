@@ -690,11 +690,13 @@ function CounterfactualEngine() {
   // ── Explainability factor breakdown ──────────────────────────────────────
   const factors = [
     { name: "Corridor baseline (ASTraM risk_score)", value: baseRisk, tone: "blue" },
+    { name: "BTP historical vulnerability (accidents, incidents, peak congestion)", value: btpUplift, tone: "blue" },
     { name: `Crowd impact (× ${eventMeta.weight} event weight)`, value: crowdC, tone: "amber" },
     { name: "Event duration", value: durationC, tone: "amber" },
     { name: `Road closure ${closurePct}%`, value: closureC, tone: "red" },
     { name: `Officer mitigation (${officers} officers)`, value: officerMit, tone: "green" },
   ];
+
   const maxAbs = Math.max(...factors.map((f) => Math.abs(f.value)), 1);
 
   // ── What-if presets ──────────────────────────────────────────────────────
