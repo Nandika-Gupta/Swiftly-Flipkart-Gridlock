@@ -1,5 +1,13 @@
 // Swiftly augmentation: loads ASTraM/EVITAS data + wires real Copilot to /api/copilot
 (function () {
+  // Hide non-functional sidebar nav buttons from the bundled Command Center UI.
+  const hiddenNav = ["Live Events", "Simulation", "Deployment", "Reports"];
+  const hideStyle = document.createElement("style");
+  hideStyle.textContent = hiddenNav
+    .map((t) => `button[data-dc-tpl="17"][title="${t}"] { display: none !important; }`)
+    .join("\n");
+  document.head.appendChild(hideStyle);
+
   window.SWIFTLY_DATA = window.SWIFTLY_DATA || {};
   Promise.all([
     fetch("/data/corridors.json").then((r) => r.json()).catch(() => []),
