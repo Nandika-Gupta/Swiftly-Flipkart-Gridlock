@@ -2,29 +2,33 @@
 (function () {
   // Hide non-functional sidebar nav buttons from the bundled Command Center UI.
   const HIDDEN_TITLES = new Set(["Live Events", "Simulation", "Deployment", "Reports"]);
-  function hideNavButtons(root) {
-    root.querySelectorAll('button[data-dc-tpl="17"]').forEach((btn) => {
+  function hideNavButtons() {
+    let found = 0;
+    document.querySelectorAll('button[data-dc-tpl="17"]').forEach((btn) => {
       const title = btn.getAttribute("title");
       if (title && HIDDEN_TITLES.has(title)) {
         btn.style.display = "none";
+        btn.style.pointerEvents = "none";
         btn.setAttribute("aria-hidden", "true");
+        found++;
       }
     });
+    return found;
   }
-  // Run after bundle DOM swap and on any late renders.
-  function installNavHider() {
-    hideNavButtons(document.body);
-    const observer = new MutationObserver((mutations) => {
-      for (const m of mutations) {
-        for (const node of m.addedNodes) {
-          if (node.nodeType === Node.ELEMENT_NODE) hideNavButtons(node);
-        }
-      }
-    });
-    observer.observe(document.body, { childList: true, subtree: true });
+  // Poll across bundle DOM swap and late renders; stop once all four are hidden.
+  let attempts = 0;
+  function pollHideNav() {
+    attempts++;
+    const hidden = hideNavButtons();
+    if (hidden < HIDDEN_TITLES.size && attempts < 120) {
+      requestAnimationFrame(pollHideNav);
+    }
   }
-  if (document.body) installNavHider();
-  else document.addEventListener("DOMContentLoaded", installNavHider);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", pollHideNav);
+  } else {
+    pollHideNav();
+  }
 
   window.SWIFTLY_DATA = window.SWIFTLY_DATA || {};
   Promise.all([
