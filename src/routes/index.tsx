@@ -189,16 +189,16 @@ function SwiftlyShell() {
         <section className="swf-content">
           <section className="swf-hero-panel">
             <div className="swf-hero-copy">
-              <div className="swf-eyebrow">
-                <span className="swf-eyebrow-line" />
-                EVITAS PIPELINE · v2.4 · DEPLOYED
+              <div className="swf-hero-badge">
+                EVITAS PIPELINE • PREDICT • DEPLOY • DIVERT
               </div>
-              <h1 className="swf-title">
-                Predict. Deploy. Divert.
-                <span className="swf-title-accent"> Event intelligence for Bengaluru.</span>
-              </h1>
-              <p className="swf-subtitle">
-                Swiftly forecasts the operational impact of planned and unplanned events before congestion occurs, then recommends optimal officer deployment, barricading, and diversion strategies using 8,173 real Bengaluru ASTRaM events.
+              <h1 className="swf-hero-brand">SWIFTLY</h1>
+              <h2 className="swf-hero-tagline">Towards an Unjammed Bengaluru.</h2>
+              <p className="swf-hero-mission">
+                Predicting and preventing event-driven congestion before it happens.
+              </p>
+              <p className="swf-hero-cred">
+                Powered by 8,173 ASTraM event records, EVITAS risk intelligence, counterfactual simulation, and AI-powered deployment optimization.
               </p>
             </div>
 
@@ -215,7 +215,7 @@ function SwiftlyShell() {
                 <span className="swf-cta-arrow">→</span>
               </button>
               <a className="swf-cta-secondary" href="#pipeline">
-                VIEW PIPELINE
+                VIEW INTELLIGENCE PIPELINE
               </a>
             </div>
           </section>
