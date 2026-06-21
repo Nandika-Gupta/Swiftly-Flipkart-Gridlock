@@ -357,7 +357,7 @@ function SwiftlyShell() {
       {/* TRANSITION TO COMMAND CENTER */}
       <section className="swf-section swf-transition">
         <div className="swf-transition-inner">
-          <div className="swf-eyebrow"><span className="swf-eyebrow-line" /> MISSION CONTROL · ONLINE</span>
+          <div className="swf-eyebrow"><span className="swf-eyebrow-line" /> MISSION CONTROL · ONLINE</div>
           <h2 className="swf-transition-title">Ready to enter Bengaluru&apos;s Traffic Command Center?</h2>
           <div className="swf-transition-feats">
             <div><span className="swf-dot swf-dot-green" /> Live EVITAS</div>
