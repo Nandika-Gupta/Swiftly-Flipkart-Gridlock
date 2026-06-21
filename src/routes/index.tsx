@@ -23,24 +23,33 @@ export const Route = createFileRoute("/")({
 
 type Corridor = {
   corridor_name: string;
-  mean_evitas: number;
-  max_evitas: number;
-  red_events: number;
-  orange_events: number;
-  event_count: number;
-  risk_rank: number;
+  mean_evitas?: number;
+  max_evitas?: number;
+  red_events?: number;
+  orange_events?: number;
+  event_count?: number;
+  risk_rank?: number;
+  risk_score?: number;
+  closure_rate?: number;
+  mean_severity?: number;
 };
 
 function SwiftlyShell() {
   const [entered, setEntered] = useState(false);
   const [corridors, setCorridors] = useState<Corridor[]>([]);
-  const [now, setNow] = useState(new Date());
+  const [now, setNow] = useState<Date | null>(null);
 
   useEffect(() => {
     fetch("/data/corridors.json")
       .then((r) => r.json())
-      .then((d) => setCorridors(d.slice(0, 8)))
+      .then((d: Corridor[]) => {
+        const sorted = [...d].sort(
+          (a, b) => (a.risk_rank ?? 999) - (b.risk_rank ?? 999),
+        );
+        setCorridors(sorted.slice(0, 8));
+      })
       .catch(() => {});
+    setNow(new Date());
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
@@ -79,8 +88,10 @@ function SwiftlyShell() {
   }
 
   const top = corridors[0];
-  const timeStr = now.toLocaleTimeString("en-IN", { hour12: false });
-  const dateStr = now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  const timeStr = now ? now.toLocaleTimeString("en-IN", { hour12: false }) : "—— : —— : ——";
+  const dateStr = now ? now.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" }) : "";
+  const scoreOf = (c: Corridor) =>
+    c.mean_evitas ?? (c.risk_score != null ? c.risk_score * 100 : 0);
 
   return (
     <div className="swf-landing">
@@ -154,19 +165,19 @@ function SwiftlyShell() {
             </div>
             <div className="swf-corr-list">
               {corridors.map((c) => {
-                const band =
-                  c.mean_evitas >= 60 ? "orange" : c.mean_evitas >= 40 ? "yellow" : "green";
+                const s = scoreOf(c);
+                const band = s >= 60 ? "orange" : s >= 40 ? "yellow" : "green";
                 return (
                   <div className="swf-corr" key={c.corridor_name}>
-                    <div className="swf-corr-rank">#{c.risk_rank}</div>
+                    <div className="swf-corr-rank">#{c.risk_rank ?? "—"}</div>
                     <div className="swf-corr-info">
                       <div className="swf-corr-name">{c.corridor_name}</div>
                       <div className="swf-corr-meta">
-                        {c.event_count} events · {c.red_events} RED · {c.orange_events} ORANGE
+                        {c.event_count ?? 0} events · closure {((c.closure_rate ?? 0) * 100).toFixed(1)}%
                       </div>
                     </div>
                     <div className={`swf-corr-score swf-band-${band}`}>
-                      {c.mean_evitas.toFixed(1)}
+                      {s.toFixed(1)}
                     </div>
                   </div>
                 );
@@ -177,8 +188,8 @@ function SwiftlyShell() {
               <div className="swf-alert">
                 <div className="swf-alert-tag">▲ TOP RISK</div>
                 <div className="swf-alert-body">
-                  <strong>{top.corridor_name}</strong> — mean EVITAS {top.mean_evitas.toFixed(1)},
-                  peak {top.max_evitas}. Recommend pre-positioning officers during 9–11 AM and 6–8 PM windows.
+                  <strong>{top.corridor_name}</strong> — risk score {scoreOf(top).toFixed(1)}.
+                  Recommend pre-positioning officers during 9–11 AM and 6–8 PM windows.
                 </div>
               </div>
             )}
