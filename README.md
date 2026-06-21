@@ -50,7 +50,7 @@ Landing page sells the vision. Operational modules demonstrate the technology.
 | # | Module | What it does |
 |---|--------|--------------|
 | 01 | **Event Intelligence** | Live ASTraM event stream classified by EVITAS impact and cause |
-| 02 | **Operational Scenario Lab** | Simulate crowd, closure, duration — EVITAS, delay and deployment update live |
+| 02 | **Operational Scenario Lab** | Simulate crowd, closure, duration - EVITAS, delay and deployment update live |
 | 03 | **Corridor Intelligence** | 23 Bengaluru corridors ranked by EVITAS + BTP vulnerability (accidents, congestion, peaks) |
 | 04 | **Response Planning** | Five-stage operational playbook from forecast → debrief |
 | 05 | **Command Copilot** | Ask plain-English questions grounded in ASTraM + BTP data |
