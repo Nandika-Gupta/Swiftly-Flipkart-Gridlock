@@ -31,7 +31,7 @@
 - [Feature Walkthrough](#feature-walkthrough)
 - [Screenshots](#screenshots)
 - [Datasets](#datasets)
-- [Data Pipeline Notebooks](#data-pipeline-notebooks)
+- [ML Models & Data Pipeline](#ml-models--data-pipeline)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -206,15 +206,21 @@ A transparent, explainable rule engine beats a black-box model trained on 8K spa
 
 ---
 
-## Data Pipeline Notebooks
+## ML Models & Data Pipeline
 
-The CSVs in `public/data/raw/` are not hand-authored — they are the output of a three-stage Python pipeline shipped in `notebooks/`. Run them top-to-bottom to regenerate every dataset SWIFTLY consumes.
+SWIFTLY is **not** a hand-tuned dashboard. Every score, band, and officer count visible in the UI is the output of a real three-stage ML pipeline on 8,173 BTP ASTraM events. The notebooks are shipped in `notebooks/` and their outputs are the CSVs the app reads from `public/data/raw/`.
 
-| Stage | Notebook | What it does | Produces |
-|---|---|---|---|
-| **1** | [`notebooks/Stage1_Causal_Inference.ipynb`](notebooks/Stage1_Causal_Inference.ipynb) | Trains a **DR Learner** (EconML) on 8,173 ASTraM events to estimate the *causal* effect of road closure on severity. Outputs per-event CATE with confidence intervals. | `counterfactual_table.csv` |
-| **2** | [`notebooks/Stage2_EVITAS_Score.ipynb`](notebooks/Stage2_EVITAS_Score.ipynb) | Combines `causal_delta` + `severity_score` + corridor `closure_rate` + `time_of_day_factor` into the single **EVITAS 0–100 score** per event, then rolls up to corridor level. | `evitas_scores.csv`, `corridor_evitas_summary.csv` |
-| **3** | [`notebooks/Stage3_ILP_Optimizer.ipynb`](notebooks/Stage3_ILP_Optimizer.ipynb) | **Linear-programming officer allocator** (`scipy.optimize.linprog`). Given N officers available, minimises total weighted residual risk across 23 corridors with min-coverage constraints on RED/ORANGE corridors. | `officer_deployment_plan.csv` |
+| Stage | Notebook | Model / Technique | Library | Produces |
+|---|---|---|---|---|
+| **1 · Causal Inference** | [`Stage1_Causal_Inference.ipynb`](notebooks/Stage1_Causal_Inference.ipynb) | **DR Learner** (Doubly-Robust meta-learner) with gradient-boosted nuisance models to estimate the *causal* effect of road closure on event severity — per-event CATE + confidence intervals | `econml`, `scikit-learn`, `lightgbm` | `counterfactual_table.csv` |
+| **2 · EVITAS Scoring** | [`Stage2_EVITAS_Score.ipynb`](notebooks/Stage2_EVITAS_Score.ipynb) | **Weighted composite scorer** fusing `causal_delta` + `severity_score` + corridor `closure_rate` + `time_of_day_factor` → single 0–100 **EVITAS** score, then min-max normalised and bucketed into RED / ORANGE / YELLOW / GREEN bands. SHAP used for per-event explainability | `pandas`, `numpy`, `shap` | `evitas_scores.csv`, `corridor_evitas_summary.csv` |
+| **3 · Officer Allocation** | [`Stage3_ILP_Optimizer.ipynb`](notebooks/Stage3_ILP_Optimizer.ipynb) | **Integer Linear Program** minimising total weighted residual risk across 23 corridors, subject to (a) total officer budget, (b) hard min-coverage on every RED corridor, (c) soft min-coverage on ORANGE | `scipy.optimize.linprog` | `officer_deployment_plan.csv` |
+
+The pipeline answers three sequential questions:
+
+1. *"If we hadn't closed this road, how much worse would it have been?"* → **causal model** (Stage 1)
+2. *"Given that effect, which corridors are actually high-risk right now?"* → **EVITAS score** (Stage 2)
+3. *"With N officers available, where do they go?"* → **ILP optimiser** (Stage 3)
 
 ### Running the notebooks
 
@@ -224,7 +230,7 @@ pip install pandas numpy scipy scikit-learn lightgbm econml shap jupyter
 jupyter notebook
 ```
 
-Run `Stage1 → Stage2 → Stage3` in order. Outputs land next to the notebooks; drop the resulting CSVs into `public/data/raw/` to refresh the app.
+Run `Stage1 → Stage2 → Stage3` in order. Outputs land next to the notebooks; copy the resulting CSVs into `public/data/raw/` to refresh the app.
 
 
 
