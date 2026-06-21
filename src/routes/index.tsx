@@ -608,7 +608,7 @@ const css = `
 .swf-time{font-size:14px;font-weight:700;color:#f6f8fb}
 .swf-date{font-size:9px;color:#97a7c7;letter-spacing:1px}
 
-.swf-shell{position:relative;z-index:5;display:grid;grid-template-columns:280px minmax(0,1fr);gap:22px;padding:22px;max-width:1560px;margin:0 auto}
+.swf-shell{position:relative;z-index:5;display:block;padding:22px;max-width:1560px;margin:0 auto}
 .swf-rail,.swf-content{min-width:0}
 .swf-rail{display:flex;flex-direction:column;gap:16px}
 .swf-rail-card,.swf-rail-section,.swf-hero-panel,.swf-preview-panel,.swf-card,.swf-plan-card,.swf-stage,.swf-loader-panel{border:1px solid rgba(176,187,218,.14);background:linear-gradient(180deg,rgba(17,28,45,.62),rgba(10,18,31,.52));backdrop-filter:blur(18px);box-shadow:0 20px 50px rgba(0,0,0,.22)}
