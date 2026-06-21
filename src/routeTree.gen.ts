@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as SwiftlyIntelligenceRouteImport } from './routes/swiftly.intelligence'
 import { Route as SwiftlyDeploymentRouteImport } from './routes/swiftly.deployment'
+import { Route as SwiftlyCorridorsRouteImport } from './routes/swiftly.corridors'
 import { Route as ApiCopilotRouteImport } from './routes/api/copilot'
 
 const IndexRoute = IndexRouteImport.update({
@@ -29,6 +30,11 @@ const SwiftlyDeploymentRoute = SwiftlyDeploymentRouteImport.update({
   path: '/swiftly/deployment',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SwiftlyCorridorsRoute = SwiftlyCorridorsRouteImport.update({
+  id: '/swiftly/corridors',
+  path: '/swiftly/corridors',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ApiCopilotRoute = ApiCopilotRouteImport.update({
   id: '/api/copilot',
   path: '/api/copilot',
@@ -38,12 +44,14 @@ const ApiCopilotRoute = ApiCopilotRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/corridors': typeof SwiftlyCorridorsRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
   '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/corridors': typeof SwiftlyCorridorsRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
   '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
 }
@@ -51,6 +59,7 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/api/copilot': typeof ApiCopilotRoute
+  '/swiftly/corridors': typeof SwiftlyCorridorsRoute
   '/swiftly/deployment': typeof SwiftlyDeploymentRoute
   '/swiftly/intelligence': typeof SwiftlyIntelligenceRoute
 }
@@ -59,14 +68,21 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/api/copilot'
+    | '/swiftly/corridors'
     | '/swiftly/deployment'
     | '/swiftly/intelligence'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/api/copilot' | '/swiftly/deployment' | '/swiftly/intelligence'
+  to:
+    | '/'
+    | '/api/copilot'
+    | '/swiftly/corridors'
+    | '/swiftly/deployment'
+    | '/swiftly/intelligence'
   id:
     | '__root__'
     | '/'
     | '/api/copilot'
+    | '/swiftly/corridors'
     | '/swiftly/deployment'
     | '/swiftly/intelligence'
   fileRoutesById: FileRoutesById
@@ -74,6 +90,7 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   ApiCopilotRoute: typeof ApiCopilotRoute
+  SwiftlyCorridorsRoute: typeof SwiftlyCorridorsRoute
   SwiftlyDeploymentRoute: typeof SwiftlyDeploymentRoute
   SwiftlyIntelligenceRoute: typeof SwiftlyIntelligenceRoute
 }
@@ -101,6 +118,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SwiftlyDeploymentRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/swiftly/corridors': {
+      id: '/swiftly/corridors'
+      path: '/swiftly/corridors'
+      fullPath: '/swiftly/corridors'
+      preLoaderRoute: typeof SwiftlyCorridorsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/api/copilot': {
       id: '/api/copilot'
       path: '/api/copilot'
@@ -114,6 +138,7 @@ declare module '@tanstack/react-router' {
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   ApiCopilotRoute: ApiCopilotRoute,
+  SwiftlyCorridorsRoute: SwiftlyCorridorsRoute,
   SwiftlyDeploymentRoute: SwiftlyDeploymentRoute,
   SwiftlyIntelligenceRoute: SwiftlyIntelligenceRoute,
 }
