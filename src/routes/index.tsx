@@ -114,9 +114,9 @@ function SwiftlyLanding() {
             <Stat value="82%" label="Confidence" sub="Historical fit" />
           </div>
           <div className="swf-cta-row">
-            <Link to="/swiftly/intelligence" className="swf-cta-primary">
+            <a href="/swiftly.html" className="swf-cta-primary" rel="noopener">
               ENTER COMMAND CENTER<span className="swf-cta-arrow">→</span>
-            </Link>
+            </a>
             <a className="swf-cta-secondary" href="#capabilities">VIEW CAPABILITIES</a>
           </div>
         </section>
