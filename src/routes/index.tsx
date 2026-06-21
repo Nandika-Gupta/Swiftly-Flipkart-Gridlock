@@ -3,27 +3,36 @@ import { createFileRoute } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Your App" },
-      { name: "description", content: "Replace this with a one-sentence description of your app." },
-      { property: "og:title", content: "Your App" },
-      { property: "og:description", content: "Replace this with a one-sentence description of your app." },
+      { title: "Swiftly — Towards an Unjammed Bengaluru" },
+      {
+        name: "description",
+        content:
+          "Swiftly is a Bengaluru Traffic Intelligence Platform that forecasts event-driven congestion and recommends manpower, barricades and diversion strategies in real time.",
+      },
+      { property: "og:title", content: "Swiftly — Towards an Unjammed Bengaluru" },
+      {
+        property: "og:description",
+        content:
+          "Forecasting event-driven congestion and recommending optimal manpower, barricading, and diversion strategies for Bengaluru Traffic Police.",
+      },
     ],
   }),
-  component: Index,
+  component: SwiftlyShell,
 });
 
-// IMPORTANT: Replace this placeholder. See ./README.md for routing conventions.
-function Index() {
+function SwiftlyShell() {
   return (
-    <div
-      className="flex min-h-screen items-center justify-center"
-      style={{ backgroundColor: "#fcfbf8" }}
-    >
-      <img
-        data-lovable-blank-page-placeholder="REMOVE_THIS"
-        src="https://cdn.gpteng.co/blank-app-v1.svg"
-        alt="Your app will live here!"
-      />
-    </div>
+    <iframe
+      title="Swiftly Command Center"
+      src="/swiftly.html"
+      style={{
+        position: "fixed",
+        inset: 0,
+        width: "100vw",
+        height: "100vh",
+        border: 0,
+        background: "#080B12",
+      }}
+    />
   );
 }

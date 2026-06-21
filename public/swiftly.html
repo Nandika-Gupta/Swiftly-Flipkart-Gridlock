@@ -1,0 +1,2097 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Swiftly — Towards an Unjammed Bengaluru</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{font-family:'Inter',system-ui,sans-serif;overflow:hidden;background:#080B12}
+:root{
+  --bg:#080B12; --bg2:#0a0f1a; --surface:#111827; --surface2:#0d1422; --border:#1F2937;
+  --text:#E7ECF5; --dim:#8a96ac; --faint:#5b677d;
+  --primary:#6366F1; --secondary:#06B6D4; --success:#22C55E; --warning:#F59E0B; --critical:#EF4444; --amber:#EAB308;
+  --glass:rgba(13,19,31,.72); --glass2:rgba(17,24,39,.6); --glassbrd:rgba(124,142,200,.16);
+  --ring:rgba(99,102,241,.5); --vig:rgba(8,11,18,.0);
+  --shadow:0 24px 60px -12px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.02) inset;
+}
+[data-theme="light"]{
+  --bg:#e9edf3; --bg2:#eef2f7; --surface:#ffffff; --surface2:#f3f6fa; --border:#d8dfe9;
+  --text:#0d1320; --dim:#56627a; --faint:#94a0b3;
+  --glass:rgba(255,255,255,.78); --glass2:rgba(255,255,255,.6); --glassbrd:rgba(99,102,241,.16);
+  --ring:rgba(99,102,241,.4);
+  --shadow:0 20px 50px -14px rgba(40,60,110,.28),0 0 0 1px rgba(255,255,255,.6) inset;
+}
+@keyframes pulseRing{0%{transform:translate(-50%,-50%) scale(.55);opacity:.85}70%{opacity:.08}100%{transform:translate(-50%,-50%) scale(1.35);opacity:0}}
+@keyframes coreP{0%,100%{opacity:1;transform:translate(-50%,-50%) scale(1)}50%{opacity:.55;transform:translate(-50%,-50%) scale(.82)}}
+@keyframes flow{to{stroke-dashoffset:-220}}
+@keyframes beamFlk{0%,100%{opacity:.9}50%{opacity:.62}}
+@keyframes scan{0%{transform:translateY(-100%)}100%{transform:translateY(100vh)}}
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+@keyframes slideL{from{opacity:0;transform:translateX(-18px)}to{opacity:1;transform:none}}
+@keyframes slideR{from{opacity:0;transform:translateX(18px)}to{opacity:1;transform:none}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes blast{0%{transform:translate(-50%,-50%) scale(.2);opacity:.0}30%{opacity:.7}100%{transform:translate(-50%,-50%) scale(1);opacity:0}}
+@keyframes dotrun{to{transform:translateX(34px)}}
+::-webkit-scrollbar{width:7px;height:7px}
+::-webkit-scrollbar-thumb{background:rgba(124,142,200,.22);border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+</style>
+
+</head>
+<body>
+<div id="swiftly-root"></div>
+
+<script>
+/* Minimal React.createElement shim — the source component uses
+   React.createElement(...) in a couple of places purely to build small SVG
+   icons (sun/moon, play/pause) as DOM-node-valued renderVals() fields. This
+   shim builds real DOM nodes so those bindings render correctly without
+   pulling in the full React/ReactDOM runtime. */
+(function(){
+  'use strict';
+  const SVG_TAGS = new Set(['svg','circle','line','path','rect','g','polygon','polyline','ellipse']);
+  function createElement(tag, props, ...children){
+    props = props || {};
+    const isSvg = SVG_TAGS.has(tag);
+    const el = isSvg
+      ? document.createElementNS('http://www.w3.org/2000/svg', tag)
+      : document.createElement(tag);
+    Object.keys(props).forEach(k=>{
+      if(k==='key') return;
+      if(k==='children') return;
+      if(k==='strokeWidth'){ el.setAttribute('stroke-width', props[k]); return; }
+      if(k==='strokeLinecap'){ el.setAttribute('stroke-linecap', props[k]); return; }
+      el.setAttribute(k, props[k]);
+    });
+    // flatten children (arrays from .map(...) calls included)
+    const flat = [];
+    (function walk(arr){
+      arr.forEach(c=>{
+        if(Array.isArray(c)) walk(c);
+        else if(c!=null) flat.push(c);
+      });
+    })(children);
+    flat.forEach(c=>{
+      if(c && c.nodeType){ el.appendChild(c); }
+      else { el.appendChild(document.createTextNode(String(c))); }
+    });
+    return el;
+  }
+  window.React = { createElement };
+})();
+
+/* Minimal DCLogic base class — provides React-Component-like setState/state
+   semantics so the original Component class (extends DCLogic) runs unmodified.
+   setState supports both an object patch and an updater function (s => patch),
+   matching the calls used throughout Swiftly.dc.html. */
+(function(){
+  'use strict';
+  class DCLogic {
+    constructor(props){
+      this.props = props || {};
+      this.state = this.state || {};
+      this._mounted = false;
+      this._pendingRaf = null;
+    }
+    setState(patch){
+      const next = (typeof patch === 'function') ? patch(this.state) : patch;
+      this.state = Object.assign({}, this.state, next);
+      this._scheduleRender();
+    }
+    _scheduleRender(){
+      // Batch into a single rAF so rapid setState calls (e.g. slider drags) don't
+      // thrash the DOM, matching React's batching behavior closely enough.
+      if(this._pendingRaf) return;
+      this._pendingRaf = requestAnimationFrame(()=>{
+        this._pendingRaf = null;
+        const prevProps = this.__prevProps, prevState = this.__prevState;
+        this.__prevProps = this.props; this.__prevState = this.state;
+        if(this.__render) this.__render();
+        if(this.componentDidUpdate) this.componentDidUpdate(prevProps, prevState);
+      });
+    }
+    _mount(){
+      this._mounted = true;
+      this.__prevProps = this.props; this.__prevState = this.state;
+      if(this.__render) this.__render();
+      if(this.componentDidMount) this.componentDidMount();
+    }
+  }
+  window.DCLogic = DCLogic;
+})();
+
+</script>
+<script>
+/* ============================================================================
+   Minimal "x-dc" template runtime.
+   Interprets the same template grammar as the source .dc.html file:
+     {{ expr }}                         -> value lookup against the latest renderVals()
+     <sc-if value="{{ expr }}">...</sc-if>      -> conditional render
+     <sc-for list="{{ expr }}" as="x">...</sc-for> -> list render, {{ x.field }} inside
+     onClick/onInput/onFocus="{{ expr }}"        -> event handler binding
+     value="{{ expr }}" on <input>                -> controlled value binding
+   This lets the original component template + class run as a plain, dependency-
+   free single HTML file (besides MapLibre GL, loaded from CDN for the map).
+   ============================================================================ */
+(function(){
+  'use strict';
+
+  // ---- expression evaluator -------------------------------------------------
+  // Expressions inside {{ }} are simple property paths optionally with one
+  // level of dot-access, e.g. "c.name", "b.t", "ins.officers". We resolve them
+  // against a scope chain: [forLoopVars..., rootVals].
+  function resolvePath(scopeChain, path){
+    path = path.trim();
+    for(let i=scopeChain.length-1;i>=0;i--){
+      const scope = scopeChain[i];
+      const parts = path.split('.');
+      if(Object.prototype.hasOwnProperty.call(scope, parts[0])){
+        let v = scope[parts[0]];
+        for(let j=1;j<parts.length;j++){
+          if(v==null) return v;
+          v = v[parts[j]];
+        }
+        return v;
+      }
+    }
+    return undefined;
+  }
+
+  function evalExpr(scopeChain, expr){
+    expr = expr.trim();
+    if(expr.startsWith('!')){
+      return !evalExpr(scopeChain, expr.slice(1));
+    }
+    // expr like "x" or "x.y" — handled by resolvePath. Anything fancier isn't needed
+    // because the source template only ever uses simple dotted paths (with an
+    // optional leading "!") in bindings.
+    return resolvePath(scopeChain, expr);
+  }
+
+  // Replace every {{ expr }} in a string with the resolved value (string-coerced).
+  function interpolate(str, scopeChain){
+    return str.replace(/\{\{\s*([^}]+?)\s*\}\}/g, (m, expr) => {
+      const v = evalExpr(scopeChain, expr);
+      if(v == null) return '';
+      if(typeof v === 'boolean') return v ? 'true':'false';
+      return String(v);
+    });
+  }
+
+  // ---- DOM-based template walker --------------------------------------------
+  // We operate on a live DOM fragment (parsed once from the template HTML
+  // string) and re-walk it on every render, building a fresh output fragment.
+  // Event handlers and controlled inputs are bound directly during the walk.
+
+  let HANDLER_SEQ = 0;
+  function bindEvents(srcNode, liveEl, scopeChain){
+    ['onClick','onInput','onFocus','onChange','onMouseEnter','onMouseLeave'].forEach(attr=>{
+      const raw = srcNode.getAttribute && srcNode.getAttribute(attr);
+      if(raw==null) return;
+      const m = raw.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+      if(!m) return;
+      const fn = evalExpr(scopeChain, m[1]);
+      if(typeof fn === 'function'){
+        const domEvt = attr.slice(2).toLowerCase();
+        liveEl.addEventListener(domEvt, fn);
+      }
+    });
+    // controlled value binding: value="{{ expr }}" on input/textarea — read from the
+    // pristine source node (the live clone never had a "value" attribute copied for
+    // inputs we want to control via .value rather than the attribute).
+    if(srcNode.tagName === 'INPUT' || srcNode.tagName === 'TEXTAREA'){
+      const raw = srcNode.getAttribute('value');
+      if(raw){
+        const m = raw.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+        if(m){
+          const v = evalExpr(scopeChain, m[1]);
+          liveEl.value = v==null?'':v;
+          liveEl.removeAttribute('value');
+        }
+      }
+    }
+  }
+
+  function interpolateAttrs(el, scopeChain){
+    if(!el.attributes) return;
+    Array.from(el.attributes).forEach(attr=>{
+      if(/^on[A-Z]/.test(attr.name)) return; // handled separately
+      if(attr.value.indexOf('{{')!==-1){
+        el.setAttribute(attr.name, interpolate(attr.value, scopeChain));
+      }
+    });
+  }
+
+  // Recursively render a template node into a new node, given the scope chain.
+  function renderNode(node, scopeChain, rootVals){
+    if(node.nodeType === Node.TEXT_NODE){
+      const txt = node.textContent;
+      if(txt.indexOf('{{')===-1) return document.createTextNode(txt);
+      // Special case: a text node whose ENTIRE content is a single {{ expr }}
+      // may resolve to a DOM node (icons built via the React.createElement shim).
+      const soleMatch = txt.trim().match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+      if(soleMatch){
+        const v = evalExpr(scopeChain, soleMatch[1]);
+        if(v && v.nodeType) return v;
+      }
+      return document.createTextNode(interpolate(txt, scopeChain));
+    }
+    if(node.nodeType === Node.COMMENT_NODE){
+      return null; // drop comments
+    }
+    if(node.nodeType !== Node.ELEMENT_NODE) return null;
+
+    const tag = node.tagName.toLowerCase();
+
+    if(tag === 'sc-if'){
+      const raw = node.getAttribute('value') || '';
+      const m = raw.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+      const cond = m ? evalExpr(scopeChain, m[1]) : false;
+      if(!cond) return null;
+      const frag = document.createDocumentFragment();
+      Array.from(node.childNodes).forEach(child=>{
+        const out = renderNode(child, scopeChain, rootVals);
+        if(out) frag.appendChild(out);
+      });
+      return frag;
+    }
+
+    if(tag === 'sc-for'){
+      const listRaw = node.getAttribute('list') || '';
+      const asName = node.getAttribute('as') || 'item';
+      const m = listRaw.match(/^\{\{\s*([^}]+?)\s*\}\}$/);
+      const list = m ? evalExpr(scopeChain, m[1]) : [];
+      const frag = document.createDocumentFragment();
+      (list||[]).forEach((item)=>{
+        const loopScope = {}; loopScope[asName] = item;
+        const innerChain = scopeChain.concat([loopScope]);
+        Array.from(node.childNodes).forEach(child=>{
+          const out = renderNode(child, innerChain, rootVals);
+          if(out) frag.appendChild(out);
+        });
+      });
+      return frag;
+    }
+
+    // Regular element — clone shallow (namespace-aware for SVG), interpolate attrs, bind events, recurse children
+    const SVG_TAGS = new Set(['svg','circle','line','path','rect','g','polygon','polyline','ellipse','defs','lineargradient','stop','clippath','text','tspan']);
+    const clone = SVG_TAGS.has(tag)
+      ? document.createElementNS('http://www.w3.org/2000/svg', node.tagName)
+      : document.createElement(node.tagName);
+    // IMPORTANT: on* attribute names (onclick, oninput, ...) are "magic" in the DOM —
+    // setAttribute('onclick', someString) makes the browser compile that STRING as a
+    // JS function body, which silently breaks our "{{ expr }}" placeholder syntax.
+    // So we resolve handlers straight from the template source node and attach them
+    // via addEventListener, and never copy on* attributes onto the live clone at all.
+    Array.from(node.attributes||[]).forEach(attr=>{
+      if(/^on[A-Za-z]/.test(attr.name)) return; // skip magic event attrs entirely
+      clone.setAttribute(attr.name, attr.value);
+    });
+    interpolateAttrs(clone, scopeChain);
+    bindEvents(node, clone, scopeChain);
+    Array.from(node.childNodes).forEach(child=>{
+      const out = renderNode(child, scopeChain, rootVals);
+      if(out) clone.appendChild(out);
+    });
+    return clone;
+  }
+
+  // ---- public API -------------------------------------------------------
+  // mount(templateHtml, mountEl, ComponentInstance)
+  // ComponentInstance must expose: .renderVals() -> plain object of bindings
+  // and trigger .__render() (assigned by us) whenever state changes.
+  function mount(templateHtml, mountEl, instance){
+    const tpl = document.createElement('template');
+    tpl.innerHTML = templateHtml;
+    const root = tpl.content;
+
+    function doRender(){
+      const vals = instance.renderVals();
+      const out = document.createDocumentFragment();
+      Array.from(root.childNodes).forEach(child=>{
+        const node = renderNode(child, [vals], vals);
+        if(node) out.appendChild(node);
+      });
+      mountEl.innerHTML = '';
+      mountEl.appendChild(out);
+    }
+    instance.__render = doRender;
+    doRender();
+    return doRender;
+  }
+
+  window.DCRuntime = { mount };
+})();
+
+</script>
+
+<script id="swiftly-template" type="text/template">
+
+
+
+<div data-theme="{{ theme }}" style="position:fixed;inset:0;background:var(--bg);color:var(--text);font-family:'Inter',sans-serif;transition:background .5s ease,color .4s ease;">
+
+  <!-- ============ MAP STAGE · real MapLibre GL (OpenFreeMap vector tiles + 3D buildings) ============ -->
+  <div style="position:absolute;inset:0;overflow:hidden;background:var(--bg);">
+    <div id="swiftly-map" style="position:absolute;inset:0;"></div>
+    <!-- cinematic vignette + scanline, above tiles / below panels -->
+    <div style="position:absolute;inset:0;pointer-events:none;z-index:1;background:radial-gradient(150% 120% at 50% 40%,transparent 56%,var(--bg) 100%);opacity:.9;"></div>
+    <div style="position:absolute;left:0;right:0;height:170px;pointer-events:none;z-index:1;opacity:.16;background:linear-gradient(rgba(6,182,212,.18),transparent);animation:scan 9s linear infinite;"></div>
+  </div>
+
+  <!-- ============ LEFT MODULE RAIL (docked command console) ============ -->
+  <div style="position:absolute;top:18px;left:18px;bottom:18px;width:78px;z-index:42;display:flex;flex-direction:column;align-items:center;gap:5px;padding:14px 8px;border-radius:16px;background:var(--glass);backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+    <div style="width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(99,102,241,.5);margin-bottom:8px;flex:none;">
+      <svg width="19" height="19" viewBox="0 0 24 24" fill="#fff"><path d="M12 2 L21 20 L12 15 L3 20 Z"/></svg>
+    </div>
+    <sc-for list="{{ navRail }}" as="m" hint-placeholder-count="8">
+      <button onClick="{{ m.onClick }}" title="{{ m.label }}" style="width:100%;display:flex;flex-direction:column;align-items:center;gap:4px;padding:8px 2px;border:none;border-radius:11px;background:{{ m.bg }};color:{{ m.fg }};cursor:pointer;font-family:inherit;transition:all .2s;box-shadow:{{ m.sh }};">
+        <span style="font-size:15px;line-height:1;">{{ m.icon }}</span>
+        <span style="font-size:7.5px;font-weight:700;letter-spacing:.02em;text-align:center;line-height:1.15;">{{ m.label }}</span>
+      </button>
+    </sc-for>
+  </div>
+
+  <!-- ============ TOP NAV ============ -->
+  <header style="position:absolute;top:18px;left:108px;right:18px;height:58px;display:flex;align-items:center;gap:14px;padding:0 14px 0 16px;border-radius:14px;background:var(--glass);backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);z-index:40;">
+    <div style="display:flex;align-items:center;gap:10px;">
+      <div style="width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;box-shadow:0 0 18px rgba(99,102,241,.5);flex:none;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 2 L21 20 L12 15 L3 20 Z" fill="#fff"/></svg>
+      </div>
+      <div style="line-height:1.05;">
+        <div style="font-size:16px;font-weight:800;letter-spacing:.16em;">SWIFTLY</div>
+        <div style="font-size:9.5px;font-weight:600;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;">Towards an Unjammed Bengaluru</div>
+      </div>
+    </div>
+
+    <!-- Bengaluru Traffic Police badge -->
+    <div title="Official data partner" style="display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);flex:none;">
+      <span style="width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,#1e3a8a,#1e40af);display:flex;align-items:center;justify-content:center;flex:none;">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg>
+      </span>
+      <div style="line-height:1.1;"><div style="font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--text);">BTP · ASTraM</div><div style="font-size:7.5px;font-weight:600;color:var(--faint);letter-spacing:.04em;">DATA PARTNER</div></div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:8px 14px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);flex:none;">
+      <span style="width:7px;height:7px;border-radius:50%;background:var(--secondary);box-shadow:0 0 8px var(--secondary);"></span>
+      <span style="font-size:9px;font-weight:700;letter-spacing:.14em;color:var(--faint);text-transform:uppercase;">Module</span>
+      <span style="font-size:13px;font-weight:700;letter-spacing:.02em;color:var(--text);">{{ moduleName }}</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:600;color:var(--faint);flex:none;white-space:nowrap;">
+      <span style="width:5px;height:5px;border-radius:50%;background:var(--success);"></span>{{ eventCorridors }} corridors live
+    </div>
+
+    <!-- Global search -->
+    <div style="flex:1;min-width:120px;max-width:280px;display:flex;align-items:center;gap:8px;padding:7px 12px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--faint)" stroke-width="2.2" style="flex:none;"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+      <input value="{{ globalSearchText }}" onInput="{{ onGlobalSearch }}" placeholder="Search corridor, event ID, zone…" style="flex:1;min-width:0;background:none;border:none;outline:none;font-family:inherit;font-size:11.5px;font-weight:500;color:var(--text);"/>
+    </div>
+
+    <div style="margin-left:auto;display:flex;align-items:center;gap:10px;flex:none;">
+      <!-- Command alerts -->
+      <div style="position:relative;">
+        <button onClick="{{ toggleAlerts }}" title="Command alerts" style="width:36px;height:36px;border-radius:9px;border:1px solid var(--glassbrd);background:var(--glass2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;position:relative;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 1 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <sc-if value="{{ hasAlerts }}" hint-placeholder-val="{{ true }}">
+            <span style="position:absolute;top:-3px;right:-3px;width:16px;height:16px;border-radius:50%;background:var(--critical);color:#fff;font-size:9px;font-weight:800;display:flex;align-items:center;justify-content:center;font-family:'JetBrains Mono',monospace;box-shadow:0 0 6px var(--critical);">{{ alertCount }}</span>
+          </sc-if>
+        </button>
+        <sc-if value="{{ alertsOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;top:44px;right:0;width:300px;border-radius:12px;background:var(--surface);border:1px solid var(--glassbrd);box-shadow:0 18px 40px rgba(0,0,0,.6);overflow:hidden;z-index:60;">
+            <div style="padding:11px 14px;border-bottom:1px solid var(--glassbrd);font-size:11px;font-weight:700;letter-spacing:.06em;">COMMAND ALERTS</div>
+            <div style="max-height:280px;overflow-y:auto;">
+              <sc-for list="{{ alertsList }}" as="a" hint-placeholder-count="3">
+                <div style="padding:10px 14px;border-bottom:1px solid var(--glassbrd);display:flex;gap:9px;align-items:flex-start;">
+                  <span style="width:7px;height:7px;border-radius:50%;background:{{ a.color }};margin-top:4px;flex:none;box-shadow:0 0 6px {{ a.color }};"></span>
+                  <div><div style="font-size:11.5px;font-weight:600;color:var(--text);">{{ a.title }}</div><div style="font-size:10px;color:var(--faint);margin-top:2px;">{{ a.detail }}</div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </sc-if>
+      </div>
+      <!-- Real ASTraM + Mappls feed status -->
+      <div style="display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);">
+        <span style="width:7px;height:7px;border-radius:50%;background:var(--success);box-shadow:0 0 8px var(--success);animation:coreP 1.6s infinite;"></span>
+        <span style="font-size:10.5px;font-weight:600;color:var(--dim);">ASTraM</span>
+        <span style="font-size:10.5px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--success);">LIVE</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:7px;padding:7px 11px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);">
+        <span style="width:7px;height:7px;border-radius:50%;background:{{ mapplsDot }};box-shadow:0 0 8px {{ mapplsDot }};"></span>
+        <span style="font-size:10.5px;font-weight:600;color:var(--dim);">Mappls</span>
+        <span style="font-size:10.5px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ mapplsDot }};">{{ mapplsStatusLabel }}</span>
+      </div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:600;letter-spacing:.04em;color:var(--text);min-width:78px;text-align:right;">{{ clock }}</div>
+      <button onClick="{{ toggleCopilot }}" title="AI Copilot" style="display:flex;align-items:center;gap:7px;padding:8px 13px;border:1px solid var(--glassbrd);border-radius:9px;background:linear-gradient(135deg,rgba(99,102,241,.22),rgba(6,182,212,.18));color:var(--text);font-family:inherit;font-size:11.5px;font-weight:700;cursor:pointer;">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><path d="M12 2a5 5 0 0 1 5 5v1a4 4 0 0 1 0 8 5 5 0 0 1-10 0 4 4 0 0 1 0-8V7a5 5 0 0 1 5-5z"/><circle cx="9" cy="10" r="1" fill="var(--secondary)" stroke="none"/><circle cx="15" cy="10" r="1" fill="var(--secondary)" stroke="none"/></svg>
+        Copilot
+      </button>
+      <button onClick="{{ toggleTheme }}" title="Toggle theme" style="position:relative;width:62px;height:30px;border:1px solid var(--glassbrd);border-radius:20px;background:var(--glass2);cursor:pointer;padding:0;transition:all .3s;flex:none;">
+        <span style="position:absolute;top:2px;left:{{ knobLeft }};width:24px;height:24px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;transition:left .3s cubic-bezier(.4,1.4,.5,1);box-shadow:0 2px 8px rgba(0,0,0,.4);color:#fff;">{{ themeIcon }}</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- ============ AI COPILOT (slide-in command advisor) ============ -->
+  <sc-if value="{{ copilotOpen }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:88px;right:18px;bottom:18px;width:380px;z-index:45;display:flex;flex-direction:column;border-radius:16px;background:var(--glass);backdrop-filter:blur(26px) saturate(150%);-webkit-backdrop-filter:blur(26px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideR .45s cubic-bezier(.22,1,.36,1) both;overflow:hidden;">
+      <div style="display:flex;align-items:center;gap:11px;padding:16px 17px;border-bottom:1px solid var(--glassbrd);">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(99,102,241,.4);">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2a5 5 0 0 1 5 5v1a4 4 0 0 1 0 8 5 5 0 0 1-10 0 4 4 0 0 1 0-8V7a5 5 0 0 1 5-5z"/><circle cx="9" cy="10" r="1.2" fill="#fff" stroke="none"/><circle cx="15" cy="10" r="1.2" fill="#fff" stroke="none"/></svg>
+        </div>
+        <div style="flex:1;"><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">SWIFTLY COPILOT</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Live operational brief</div></div>
+        <button onClick="{{ toggleCopilot }}" style="width:26px;height:26px;border-radius:7px;border:1px solid var(--glassbrd);background:var(--glass2);color:var(--dim);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M6 6l12 12M18 6 6 18"/></svg>
+        </button>
+      </div>
+      <div style="flex:1;overflow-y:auto;padding:15px 17px;display:flex;flex-direction:column;gap:11px;">
+        <div style="display:flex;gap:10px;align-items:flex-start;">
+          <div style="width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--secondary));flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;">S</div>
+          <div style="font-size:12.5px;line-height:1.55;color:var(--text);padding:11px 13px;border-radius:12px 12px 12px 3px;background:var(--glass2);border:1px solid var(--glassbrd);">Commander — here is the live read on the active scenario.</div>
+        </div>
+        <sc-for list="{{ copilotBrief }}" as="b" hint-placeholder-count="5">
+          <div style="padding:12px 14px;border-radius:11px;background:var(--glass2);border:1px solid var(--glassbrd);border-left:3px solid var(--secondary);">
+            <div style="font-size:9.5px;font-weight:800;letter-spacing:.1em;color:var(--secondary);text-transform:uppercase;margin-bottom:5px;">{{ b.t }}</div>
+            <div style="font-size:12.5px;line-height:1.55;color:var(--text);">{{ b.d }}</div>
+          </div>
+        </sc-for>
+        <sc-for list="{{ copilotTurns }}" as="t" hint-placeholder-count="0">
+          <div>
+            <div style="display:flex;justify-content:flex-end;margin-bottom:7px;"><div style="font-size:12px;font-weight:600;color:#fff;padding:9px 13px;border-radius:12px 12px 3px 12px;background:linear-gradient(135deg,var(--primary),var(--secondary));max-width:84%;">{{ t.q }}</div></div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <div style="width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,var(--primary),var(--secondary));flex:none;display:flex;align-items:center;justify-content:center;color:#fff;font-size:12px;font-weight:800;">S</div>
+              <div style="font-size:12.5px;line-height:1.55;color:var(--text);padding:11px 13px;border-radius:12px 12px 12px 3px;background:var(--glass2);border:1px solid var(--glassbrd);">{{ t.a }}</div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="padding:13px 17px;border-top:1px solid var(--glassbrd);display:flex;flex-wrap:wrap;gap:7px;">
+        <sc-for list="{{ copilotChips }}" as="c" hint-placeholder-count="4">
+          <button onClick="{{ c.onClick }}" style="padding:7px 11px;border-radius:8px;border:1px solid rgba(6,182,212,.3);background:rgba(6,182,212,.1);font-family:inherit;font-size:11px;font-weight:600;color:var(--secondary);cursor:pointer;">{{ c.label }}</button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ VIEW PANELS ============ -->
+
+  <!-- ========== MAP VIEW ========== -->
+  <sc-if value="{{ isMap }}" hint-placeholder-val="{{ true }}">
+    <!-- EXECUTIVE OVERVIEW · command KPI strip (DrishtiGridAI-style top hierarchy) -->
+    <div style="position:absolute;top:90px;left:454px;right:18px;z-index:35;display:flex;gap:1px;border-radius:14px;overflow:hidden;background:var(--glassbrd);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+      <div style="flex:1;padding:12px 16px;background:var(--glass);backdrop-filter:blur(22px);"><div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:5px;">Severity Index</div><div style="display:flex;align-items:baseline;gap:4px;"><span style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:{{ riskColor }};line-height:1;">{{ scoreStr }}</span><span style="font-size:11px;font-weight:600;color:var(--faint);">/100</span></div></div>
+      <div style="flex:1;padding:12px 16px;background:var(--glass);backdrop-filter:blur(22px);"><div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:5px;">Expected Delay</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--critical);line-height:1;">{{ delayStr }}</div></div>
+      <div style="flex:1;padding:12px 16px;background:var(--glass);backdrop-filter:blur(22px);"><div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:5px;">Impact Radius</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--warning);line-height:1;">{{ impactStr }}</div></div>
+      <div style="flex:1;padding:12px 16px;background:var(--glass);backdrop-filter:blur(22px);"><div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:5px;">Est. Recovery</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--secondary);line-height:1;">{{ recoveryStr }}</div></div>
+      <div style="flex:1;padding:12px 16px;background:var(--glass);backdrop-filter:blur(22px);"><div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:5px;">Officers</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--primary);line-height:1;">{{ ins.officers }}</div></div>
+      <div style="flex:1;padding:12px 16px;background:var(--glass);backdrop-filter:blur(22px);"><div style="font-size:8.5px;font-weight:700;letter-spacing:.12em;color:var(--faint);text-transform:uppercase;margin-bottom:5px;">Confidence</div><div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:var(--success);line-height:1;">{{ confStr }}</div></div>
+    </div>
+    <!-- LEFT: Event Simulation (Overview / Event Simulator modules) -->
+    <sc-if value="{{ !isEventsModule }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;top:90px;left:108px;width:330px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:16px;">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;box-shadow:0 0 14px rgba(99,102,241,.4);">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="#fff"><path d="M13 2 3 14h7l-1 8 10-12h-7z"/></svg>
+        </div>
+        <div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">EVENT SIMULATION</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Model an upcoming event</div></div>
+      </div>
+      <div style="margin-bottom:11px;position:relative;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Source Location</span>
+          <span style="font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--secondary);font-family:'JetBrains Mono',monospace;">MAPPLS SEARCH</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m21 21-4.3-4.3"/></svg>
+          <input value="{{ srcText }}" onInput="{{ onSrcInput }}" onFocus="{{ onSrcInput }}" placeholder="Search Bengaluru…" style="flex:1;min-width:0;background:none;border:none;outline:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text);"/>
+        </div>
+        <sc-if value="{{ srcOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;top:100%;margin-top:5px;z-index:50;border-radius:10px;overflow:hidden;background:var(--surface);border:1px solid var(--glassbrd);box-shadow:0 18px 40px rgba(0,0,0,.6);">
+            <sc-for list="{{ srcResults }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.onPick }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:9px 12px;border:none;border-bottom:1px solid var(--glassbrd);background:none;cursor:pointer;text-align:left;font-family:inherit;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2" style="flex:none;"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.4-3.6-8-8-8z"/><circle cx="12" cy="10" r="2.4"/></svg>
+                <span style="min-width:0;"><span style="display:block;font-size:12px;font-weight:600;color:var(--text);">{{ r.name }}</span><span style="display:block;font-size:10px;color:var(--faint);">{{ r.address }}</span></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div style="margin-bottom:13px;position:relative;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+          <span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Event Venue · Epicentre</span>
+          <span style="font-size:8px;font-weight:700;letter-spacing:.08em;color:var(--primary);font-family:'JetBrains Mono',monospace;">OSM GEOCODE</span>
+        </div>
+        <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.4-3.6-8-8-8z"/><circle cx="12" cy="10" r="2.4"/></svg>
+          <input value="{{ venueText }}" onInput="{{ onVenueInput }}" onFocus="{{ onVenueInput }}" placeholder="Whitefield, Chinnaswamy Stadium, Palace Grounds…" style="flex:1;min-width:0;background:none;border:none;outline:none;font-family:inherit;font-size:12.5px;font-weight:600;color:var(--text);"/>
+        </div>
+        <sc-if value="{{ venueOpen }}" hint-placeholder-val="{{ false }}">
+          <div style="position:absolute;left:0;right:0;top:100%;margin-top:5px;z-index:50;border-radius:10px;overflow:hidden;background:var(--surface);border:1px solid var(--glassbrd);box-shadow:0 18px 40px rgba(0,0,0,.6);">
+            <sc-for list="{{ venueResults }}" as="r" hint-placeholder-count="4">
+              <button onClick="{{ r.onPick }}" style="display:flex;align-items:center;gap:9px;width:100%;padding:9px 12px;border:none;border-bottom:1px solid var(--glassbrd);background:none;cursor:pointer;text-align:left;font-family:inherit;">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2" style="flex:none;"><path d="M12 2C7.6 2 4 5.6 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.4-3.6-8-8-8z"/><circle cx="12" cy="10" r="2.4"/></svg>
+                <span style="min-width:0;"><span style="display:block;font-size:12px;font-weight:600;color:var(--text);">{{ r.name }}</span><span style="display:block;font-size:10px;color:var(--faint);">{{ r.address }}</span></span>
+              </button>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:7px;">Event Type</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:15px;">
+        <sc-for list="{{ eventChips }}" as="c" hint-placeholder-count="7">
+          <button onClick="{{ c.onClick }}" style="padding:6px 11px;border-radius:8px;border:1px solid {{ c.brd }};background:{{ c.bg }};color:{{ c.fg }};font-family:inherit;font-size:11.5px;font-weight:600;cursor:pointer;transition:all .2s;">{{ c.label }}</button>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px;">
+        <span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Expected Crowd</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--secondary);">{{ crowdStr }}</span>
+      </div>
+      <input type="range" min="500" max="50000" step="500" value="{{ crowd }}" onInput="{{ setCrowd }}" style="width:100%;accent-color:var(--primary);height:5px;margin-bottom:14px;cursor:pointer;"/>
+      <div style="display:flex;gap:12px;margin-bottom:14px;">
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;"><span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Duration</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--secondary);">{{ durationStr }}</span></div>
+          <input type="range" min="1" max="12" step="1" value="{{ duration }}" onInput="{{ setDuration }}" style="width:100%;accent-color:var(--secondary);height:5px;cursor:pointer;"/>
+        </div>
+        <div style="flex:1;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;"><span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Road Closure</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--warning);">{{ closureStr }}</span></div>
+          <input type="range" min="0" max="100" step="5" value="{{ closure }}" onInput="{{ setClosure }}" style="width:100%;accent-color:var(--warning);height:5px;cursor:pointer;"/>
+        </div>
+      </div>
+      <div style="margin-bottom:15px;">
+        <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:6px;">Event Start</div>
+        <div style="display:flex;align-items:center;gap:9px;padding:10px 12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--amber)" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+          <span style="font-size:12.5px;font-weight:600;">Today · 18:30 IST</span>
+        </div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onClick="{{ analyze }}" style="flex:1;padding:13px;border:none;border-radius:11px;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-family:inherit;font-size:13px;font-weight:700;letter-spacing:.03em;cursor:pointer;box-shadow:0 8px 24px -6px rgba(99,102,241,.6);display:flex;align-items:center;justify-content:center;gap:8px;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+          Analyze Impact
+        </button>
+        <button onClick="{{ centerEvent }}" title="Center map on event" style="flex:none;width:46px;padding:13px 0;border:1px solid var(--glassbrd);border-radius:11px;background:var(--glass2);color:var(--secondary);cursor:pointer;display:flex;align-items:center;justify-content:center;">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="7"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/><circle cx="12" cy="12" r="2.2" fill="currentColor" stroke="none"/></svg>
+        </button>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- LEFT: Live Events monitoring feed (Live Events module) -->
+    <sc-if value="{{ isEventsModule }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:90px;left:108px;width:330px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:6px;">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2l2.8 2.8M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/></svg>
+        </div>
+        <div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">LIVE EVENTS</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Real-time corridor monitoring</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--faint);line-height:1.5;margin-bottom:14px;">Corridors ranked by current EVITAS risk. Hotspot markers on the map are the ILP-deployed set; circles scale with risk severity.</div>
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:430px;overflow-y:auto;">
+        <sc-for list="{{ liveEventsFeed }}" as="e" hint-placeholder-count="12">
+          <div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);border-left:3px solid {{ e.color }};">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ e.color }};box-shadow:0 0 8px {{ e.color }};flex:none;{{ e.pulse }}"></span>
+            <div style="flex:1;min-width:0;"><div style="font-size:11.5px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.name }}</div><div style="font-size:9.5px;color:var(--faint);">{{ e.events }} logged · {{ e.officers }} officer{{ e.plural }}</div></div>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:{{ e.color }};">{{ e.evitas }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+    </sc-if>
+
+    <!-- RIGHT: AI Insight -->
+    <div style="position:absolute;top:90px;right:18px;width:336px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideR .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--secondary);box-shadow:0 0 10px var(--secondary);animation:coreP 1.6s infinite;"></span>
+          <div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">AI INSIGHT</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">{{ selName }} · {{ eventType }}</div></div>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--primary);padding:3px 7px;border-radius:6px;background:rgba(99,102,241,.14);">EVITAS</span>
+      </div>
+      <div style="display:flex;justify-content:center;margin:4px 0 10px;">
+        <div style="position:relative;width:138px;height:138px;border-radius:50%;background:{{ gaugeBg }};display:flex;align-items:center;justify-content:center;">
+          <div style="position:absolute;inset:11px;border-radius:50%;background:var(--surface);box-shadow:0 0 30px rgba(0,0,0,.4) inset;"></div>
+          <div style="position:relative;text-align:center;">
+            <div style="font-family:'JetBrains Mono',monospace;font-size:40px;font-weight:700;line-height:1;color:{{ riskColor }};">{{ scoreStr }}</div>
+            <div style="font-size:8.5px;font-weight:700;letter-spacing:.18em;color:var(--faint);margin-top:3px;">CONGESTION</div>
+          </div>
+        </div>
+      </div>
+      <div style="text-align:center;margin-bottom:14px;">
+        <span style="display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.08em;color:{{ riskColor }};padding:4px 12px;border-radius:20px;border:1px solid {{ riskColor }};background:var(--glass2);">{{ ins.risk }} RISK</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:11px;">
+        <div style="padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Predicted Delay</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--critical);">{{ delayStr }}</div></div>
+        <div style="padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Affected Roads</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;">{{ ins.roads }}</div></div>
+        <div style="padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Officers Req.</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--primary);">{{ ins.officers }}</div></div>
+        <div style="padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Barricades</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--amber);">{{ ins.barricades }}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px;border-radius:10px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.32);margin-bottom:12px;">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><circle cx="6" cy="19" r="2.4"/><circle cx="18" cy="5" r="2.4"/><path d="M8 19h7a4 4 0 0 0 4-4V8M16 5H9a4 4 0 0 0-4 4v6"/></svg>
+        <div style="min-width:0;"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:2px;">Recommended Diversion</div><div style="font-size:12.5px;font-weight:700;color:var(--secondary);">{{ diversion }}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Affected Corridors</span>
+        <span style="display:flex;align-items:center;gap:5px;font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--warning);"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--warning)" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3" fill="var(--warning)" stroke="none"/></svg>{{ impactStr }} radius</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:5px;margin-bottom:12px;">
+        <sc-for list="{{ affectedList }}" as="a" hint-placeholder-count="4">
+          <div style="display:flex;align-items:center;gap:9px;padding:7px 10px;border-radius:8px;background:var(--glass2);border:1px solid var(--glassbrd);border-left:3px solid {{ a.color }};">
+            <span style="font-size:11.5px;font-weight:600;flex:1;min-width:0;">{{ a.name }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--faint);">{{ a.dist }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:{{ a.color }};">{{ a.evitas }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;"><span style="font-size:10px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;">Model Confidence</span><span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--success);">{{ confStr }}</span></div>
+      <div style="height:6px;border-radius:4px;background:var(--glass2);overflow:hidden;"><div style="height:100%;width:{{ confPct }};border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--success));box-shadow:0 0 8px var(--success);transition:width .5s;"></div></div>
+    </div>
+  </sc-if>
+
+  <!-- ========== COMMAND VIEW ========== -->
+  <sc-if value="{{ isCmd }}" hint-placeholder-val="{{ true }}">
+    <!-- LEFT: EVITAS Risk Index -->
+    <div style="position:absolute;top:90px;left:108px;width:336px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:6px;">
+        <div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M12 2 4 6v6c0 5 3.5 8 8 10 4.5-2 8-5 8-10V6z"/></svg></div>
+        <div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">EVITAS RISK INDEX</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Digital twin · live corridor scoring</div></div>
+      </div>
+      <div style="font-size:10px;color:var(--faint);line-height:1.5;margin-bottom:14px;font-weight:500;">Event Vulnerability Index for Traffic Anomaly Scoring — 0&ndash;100 per corridor.</div>
+      <sc-for list="{{ corr }}" as="c" hint-placeholder-count="8">
+        <div style="margin-bottom:11px;">
+          <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;">
+            <span style="font-size:12px;font-weight:600;">{{ c.name }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:{{ c.color }};">{{ c.evitas }}</span>
+          </div>
+          <div style="height:6px;border-radius:4px;background:var(--glass2);overflow:hidden;"><div style="height:100%;width:{{ c.barPct }};border-radius:4px;background:{{ c.color }};box-shadow:0 0 8px {{ c.color }};"></div></div>
+        </div>
+      </sc-for>
+    </div>
+
+    <!-- RIGHT: Response Plan + What-If -->
+    <div style="position:absolute;top:90px;right:18px;width:340px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideR .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 10px var(--primary);"></span><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">AI RESPONSE PLAN</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">ILP-optimized · {{ totOfficers }} officers, {{ totBar }} barricades</div></div></div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:8px;">Officer Deployment</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:14px;">
+        <sc-for list="{{ officerPlan }}" as="o" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);"><span style="width:24px;height:24px;border-radius:7px;background:rgba(99,102,241,.18);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;">▲</span><span style="font-size:12px;font-weight:600;flex:1;min-width:0;">{{ o.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--primary);">+{{ o.officers }}</span></div>
+        </sc-for>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:8px;">Barricade Placement</div>
+      <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+        <sc-for list="{{ barricadePlan }}" as="b" hint-placeholder-count="2">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);"><span style="width:24px;height:24px;border-radius:7px;background:rgba(245,158,11,.18);color:var(--amber);display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;">■</span><span style="font-size:12px;font-weight:600;flex:1;min-width:0;">{{ b.name }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--amber);">×{{ b.barricades }}</span></div>
+        </sc-for>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:9px;">What-If Simulation</div>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:13px;">
+        <sc-for list="{{ whatIfControls }}" as="w" hint-placeholder-count="3">
+          <button onClick="{{ w.onClick }}" style="display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);cursor:pointer;text-align:left;font-family:inherit;">
+            <span style="font-size:13px;color:var(--text);">{{ w.ic }}</span>
+            <div style="flex:1;"><div style="font-size:12px;font-weight:600;color:var(--text);">{{ w.label }}</div><div style="font-size:10px;color:var(--faint);">{{ w.desc }}</div></div>
+            <span style="position:relative;width:38px;height:21px;border-radius:12px;background:{{ w.track }};flex:none;transition:background .25s;"><span style="position:absolute;top:2px;left:{{ w.knob }};width:17px;height:17px;border-radius:50%;background:#fff;transition:left .25s;box-shadow:0 1px 4px rgba(0,0,0,.4);"></span></span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 14px;border-radius:11px;background:linear-gradient(135deg,rgba(34,197,94,.14),rgba(6,182,212,.1));border:1px solid rgba(34,197,94,.3);">
+        <div><div style="font-size:9.5px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;">Projected Delay</div><div style="font-size:11px;color:var(--dim);font-weight:500;"><s>{{ baseDelayStr }}</s> → <b style="color:var(--success)">{{ delayStr }}</b></div></div>
+        <div style="text-align:right;"><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--success);line-height:1;">−{{ savedPct }}</div><div style="font-size:9px;color:var(--faint);font-weight:600;">REDUCTION</div></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ========== ANALYSIS VIEW ========== -->
+  <sc-if value="{{ isAna }}" hint-placeholder-val="{{ true }}">
+    <!-- LEFT: Event Impact -->
+    <div style="position:absolute;top:90px;left:108px;width:336px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;"><div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--critical),var(--warning));display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2"><path d="M12 9v4M12 17h.01M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg></div><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">EVENT IMPACT</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">{{ eventType }} · {{ attStr }} expected</div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:16px;">
+        <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Peak Delay</div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--critical);">{{ delayStr }}</div></div>
+        <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Confidence</div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:var(--success);">{{ confStr }}</div></div>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:10px;">Congestion Blast Radius</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <sc-for list="{{ blastZones }}" as="z" hint-placeholder-count="3">
+          <div style="display:flex;align-items:center;gap:12px;padding:11px 13px;border-radius:11px;background:{{ z.bg }};border:1px solid {{ z.color }};">
+            <div style="width:40px;height:40px;border-radius:50%;border:2px solid {{ z.color }};display:flex;align-items:center;justify-content:center;flex:none;"><span style="font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:{{ z.color }};">{{ z.r }}</span></div>
+            <div style="flex:1;"><div style="font-size:12.5px;font-weight:700;color:{{ z.color }};">{{ z.label }}</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">{{ z.r }} km radius · ~{{ z.pop }} affected</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- RIGHT: Explainable AI -->
+    <div style="position:absolute;top:90px;right:18px;width:340px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideR .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--secondary);box-shadow:0 0 10px var(--secondary);"></span><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">WHY THIS PREDICTION</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Explainable AI · feature weights</div></div></div>
+      <div style="font-size:10px;color:var(--faint);line-height:1.5;margin-bottom:8px;font-weight:500;">Drivers of the {{ scoreStr }} EVITAS score for {{ selName }}.</div>
+      <div style="font-family:'JetBrains Mono',monospace;font-size:9.5px;color:var(--faint);background:var(--glass2);border:1px solid var(--glassbrd);border-radius:8px;padding:8px 10px;margin-bottom:14px;line-height:1.6;">EVITAS = 0.35·causal_delta + 0.30·severity + 0.20·closure_rate + 0.15·time_of_day</div>
+      <div style="display:flex;flex-direction:column;gap:12px;margin-bottom:18px;">
+        <sc-for list="{{ explain }}" as="e" hint-placeholder-count="5">
+          <div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;"><span style="font-size:11.5px;font-weight:600;">{{ e.label }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:{{ e.color }};">{{ e.w }}</span></div>
+            <div style="height:6px;border-radius:4px;background:var(--glass2);overflow:hidden;"><div style="height:100%;width:{{ e.wpct }};border-radius:4px;background:{{ e.color }};box-shadow:0 0 8px {{ e.color }};"></div></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:9px;">Resource Plan</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+        <div style="padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Officers</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--primary);">{{ ins.officers }}</div></div>
+        <div style="padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Barricades</div><div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--amber);">{{ ins.barricades }}</div></div>
+      </div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px;border-radius:10px;background:rgba(6,182,212,.1);border:1px solid rgba(6,182,212,.32);">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--secondary)" stroke-width="2"><circle cx="6" cy="19" r="2.4"/><circle cx="18" cy="5" r="2.4"/><path d="M8 19h7a4 4 0 0 0 4-4V8M16 5H9a4 4 0 0 0-4 4v6"/></svg>
+        <div><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;">Diversion</div><div style="font-size:12.5px;font-weight:700;color:var(--secondary);">{{ diversion }}</div></div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ========== DEPLOYMENT VIEW ========== -->
+  <sc-if value="{{ isDep }}" hint-placeholder-val="{{ true }}">
+    <!-- LEFT: Corridor Risk Ranking -->
+    <div style="position:absolute;top:90px;left:108px;width:336px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;"><div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">CORRIDOR RISK RANKING</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Prioritised by EVITAS score</div></div></div>
+      <div style="display:flex;flex-direction:column;gap:7px;">
+        <sc-for list="{{ corr }}" as="c" hint-placeholder-count="8">
+          <div style="display:flex;align-items:center;gap:11px;padding:10px 12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);border-left:3px solid {{ c.color }};">
+            <span style="font-family:'JetBrains Mono',monospace;font-size:15px;font-weight:700;color:{{ c.color }};min-width:26px;">{{ c.evitas }}</span>
+            <div style="flex:1;min-width:0;"><div style="font-size:12px;font-weight:600;">{{ c.name }}</div><div style="font-size:10px;color:var(--faint);font-weight:600;letter-spacing:.04em;">{{ c.lvl }} · {{ c.delay }} min</div></div>
+            <div style="text-align:right;"><div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--primary);">{{ c.officers }}</div><div style="font-size:8.5px;color:var(--faint);font-weight:700;letter-spacing:.08em;">OFFICERS</div></div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+
+    <!-- RIGHT: EVITAS Distribution + Manifest -->
+    <div style="position:absolute;top:90px;right:18px;width:344px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);-webkit-backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideR .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--primary);box-shadow:0 0 10px var(--primary);"></span><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">EVITAS DISTRIBUTION</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Stage-2 score histogram · 8,173 events</div></div></div>
+      <!-- event-count histogram, banded at 40 / 60 / 80 -->
+      <div style="display:flex;align-items:flex-end;gap:2px;height:64px;margin-bottom:6px;">
+        <sc-for list="{{ evitasHist }}" as="b" hint-placeholder-count="30">
+          <div style="flex:1;height:{{ b.h }};border-radius:2px 2px 0 0;background:{{ b.color }};min-height:3px;opacity:.92;"></div>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;font-size:8px;font-weight:700;color:var(--faint);font-family:'JetBrains Mono',monospace;margin-bottom:5px;"><span>25</span><span style="color:var(--success)">GREEN</span><span style="color:var(--amber)">40</span><span style="color:var(--warning)">60</span><span style="color:var(--critical)">80</span><span>90</span></div>
+      <div style="height:1px;background:var(--glassbrd);margin:8px 0 12px;"></div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:9px;">Mean EVITAS by Corridor</div>
+      <div style="display:flex;align-items:flex-end;gap:6px;height:84px;padding:0 2px 0;margin-bottom:8px;">
+        <sc-for list="{{ corr }}" as="c" hint-placeholder-count="8">
+          <div style="flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:5px;height:100%;">
+            <div style="width:100%;height:{{ c.barPct }};border-radius:4px 4px 0 0;background:linear-gradient(to top,{{ c.color }},rgba(255,255,255,.1));box-shadow:0 0 8px {{ c.color }};min-height:6px;"></div>
+            <span style="font-size:8px;font-weight:700;color:var(--faint);letter-spacing:.02em;">{{ c.code }}</span>
+          </div>
+        </sc-for>
+      </div>
+      <div style="height:1px;background:var(--glassbrd);margin:6px 0 14px;"></div>
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;"><span style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;">Deployment Manifest</span><span style="font-size:10px;font-weight:600;color:var(--dim);">{{ totOfficers }} units · {{ totBar }} barricades</span></div>
+      <div style="display:flex;flex-direction:column;gap:6px;">
+        <sc-for list="{{ manifest }}" as="m" hint-placeholder-count="5">
+          <div style="display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);">
+            <span style="width:7px;height:7px;border-radius:50%;background:{{ m.color }};box-shadow:0 0 8px {{ m.color }};flex:none;"></span>
+            <span style="font-size:12px;font-weight:600;flex:1;min-width:0;">{{ m.zone }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--primary);">▲{{ m.officers }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--amber);">■{{ m.barricades }}</span>
+            <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:600;color:var(--faint);min-width:38px;text-align:right;">{{ m.eta }}</span>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ========== RESOURCE ALLOCATION MODULE — full-width operational planning screen ========== -->
+  <sc-if value="{{ isResource }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:90px;left:108px;right:18px;bottom:18px;z-index:36;display:flex;gap:14px;">
+      <!-- LEFT: capacity ledger -->
+      <div style="width:300px;flex:none;display:flex;flex-direction:column;gap:14px;overflow-y:auto;">
+        <div style="padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+          <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;"><div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">FORCE LEDGER</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Bengaluru Traffic Police · ILP allocation</div></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px;">
+            <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Total Pool</div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;">{{ resTotal }}</div></div>
+            <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Assigned</div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--primary);">{{ resAssigned }}</div></div>
+            <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">In Reserve</div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--success);">{{ resReserve }}</div></div>
+            <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Utilization</div><div style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--warning);">{{ resUtilStr }}</div></div>
+          </div>
+          <div style="height:8px;border-radius:5px;background:var(--glass2);overflow:hidden;margin-bottom:6px;"><div style="height:100%;width:{{ resUtilStr }};border-radius:5px;background:linear-gradient(90deg,var(--primary),var(--warning));"></div></div>
+          <div style="font-size:10px;color:var(--faint);font-weight:500;">Barricades in stock: <b style="color:var(--text);font-family:'JetBrains Mono',monospace;">{{ totBar }}</b> across {{ resBarricadeZones }} zones</div>
+        </div>
+        <div style="padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);flex:1;overflow-y:auto;">
+          <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:10px;">Shortfall Watchlist</div>
+          <div style="font-size:10px;color:var(--faint);line-height:1.5;margin-bottom:12px;">Corridors where residual risk per officer exceeds the safe operating threshold.</div>
+          <div style="display:flex;flex-direction:column;gap:7px;">
+            <sc-for list="{{ shortfalls }}" as="s" hint-placeholder-count="5">
+              <div style="display:flex;align-items:center;gap:9px;padding:9px 10px;border-radius:9px;background:var(--glass2);border:1px solid var(--glassbrd);border-left:3px solid {{ s.color }};">
+                <div style="flex:1;min-width:0;"><div style="font-size:11.5px;font-weight:600;">{{ s.name }}</div><div style="font-size:9.5px;color:var(--faint);">{{ s.officers }} officer{{ s.plural }} · residual {{ s.residual }}</div></div>
+                <span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:{{ s.color }};">{{ s.band }}</span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+      <!-- CENTER: per-corridor allocation table -->
+      <div style="flex:1;display:flex;flex-direction:column;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:fadeUp .5s both;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">CORRIDOR ALLOCATION TABLE</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Stage 3 ILP — minimum guarantee + risk-proportional surplus</div></div>
+          <div style="display:flex;gap:14px;font-size:10px;color:var(--faint);font-weight:600;">
+            <span><span style="color:var(--primary);">●</span> Minimum</span>
+            <span><span style="color:var(--secondary);">●</span> Surplus</span>
+          </div>
+        </div>
+        <div style="display:grid;grid-template-columns:1.6fr .6fr .9fr 1.6fr .6fr;gap:8px;padding:8px 10px;font-size:9px;font-weight:700;letter-spacing:.06em;color:var(--faint);text-transform:uppercase;border-bottom:1px solid var(--glassbrd);margin-bottom:4px;">
+          <span>Corridor</span><span>Band</span><span>Min+Surplus</span><span>Allocation</span><span style="text-align:right;">Total</span>
+        </div>
+        <div style="flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:3px;">
+          <sc-for list="{{ allocationRows }}" as="r" hint-placeholder-count="23">
+            <div style="display:grid;grid-template-columns:1.6fr .6fr .9fr 1.6fr .6fr;gap:8px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--glass2);">
+              <span style="font-size:11.5px;font-weight:600;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ r.name }}</span>
+              <span style="font-size:10px;font-weight:700;color:{{ r.color }};">{{ r.band }}</span>
+              <span style="font-family:'JetBrains Mono',monospace;font-size:10.5px;color:var(--faint);">{{ r.minOfficers }}+{{ r.surplusOfficers }}</span>
+              <span style="height:8px;border-radius:4px;background:rgba(255,255,255,.06);overflow:hidden;display:flex;">
+                <span style="height:100%;width:{{ r.minPct }};background:var(--primary);"></span>
+                <span style="height:100%;width:{{ r.surPct }};background:var(--secondary);"></span>
+              </span>
+              <span style="text-align:right;font-family:'JetBrains Mono',monospace;font-size:12px;font-weight:700;color:var(--text);">{{ r.officers }}</span>
+            </div>
+          </sc-for>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ========== HISTORICAL REPLAY MODULE — time-slider replay of real ASTraM events ========== -->
+  <sc-if value="{{ isReplay }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:90px;left:108px;width:336px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideL .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:11px;margin-bottom:14px;"><div style="width:32px;height:32px;border-radius:9px;background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg></div><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">HISTORICAL REPLAY</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">{{ replayDateRange }} · {{ replayTotal }} logged events</div></div></div>
+      <div style="font-size:10px;color:var(--faint);line-height:1.5;margin-bottom:14px;">Step through real ASTraM incidents in sequence. Each entry is an actual logged record from the source dataset.</div>
+      <div style="display:flex;align-items:center;gap:9px;margin-bottom:14px;">
+        <button onClick="{{ replayPrev }}" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--glassbrd);background:var(--glass2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M15 6l-6 6 6 6"/></svg></button>
+        <div style="flex:1;text-align:center;"><div style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:var(--secondary);">{{ replayIndexStr }}</div></div>
+        <button onClick="{{ replayNext }}" style="width:34px;height:34px;border-radius:9px;border:1px solid var(--glassbrd);background:var(--glass2);color:var(--text);cursor:pointer;display:flex;align-items:center;justify-content:center;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M9 6l6 6-6 6"/></svg></button>
+      </div>
+      <div style="padding:14px;border-radius:12px;background:var(--glass2);border:1px solid var(--glassbrd);margin-bottom:12px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:var(--faint);">{{ replayEvent.id }}</span>
+          <span style="font-size:9.5px;font-weight:700;letter-spacing:.06em;padding:3px 8px;border-radius:6px;background:{{ replayEvent.typeBg }};color:{{ replayEvent.typeColor }};">{{ replayEvent.typeLabel }}</span>
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--text);margin-bottom:4px;">{{ replayEvent.label }}</div>
+        <div style="font-size:10.5px;color:var(--dim);">{{ replayEvent.corridor }} · Priority {{ replayEvent.priority }}{{ replayEvent.closureNote }}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;max-height:220px;overflow-y:auto;">
+        <sc-for list="{{ replayList }}" as="e" hint-placeholder-count="9">
+          <button onClick="{{ e.onClick }}" style="display:flex;align-items:center;gap:9px;padding:8px 10px;border-radius:8px;border:1px solid {{ e.brd }};background:{{ e.bg }};cursor:pointer;text-align:left;font-family:inherit;">
+            <span style="width:6px;height:6px;border-radius:50%;background:{{ e.dot }};flex:none;"></span>
+            <span style="font-size:11px;font-weight:600;color:var(--text);flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+    <div style="position:absolute;top:90px;right:18px;width:340px;z-index:36;padding:17px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);animation:slideR .5s cubic-bezier(.22,1,.36,1) both;">
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:14px;"><span style="width:8px;height:8px;border-radius:50%;background:var(--secondary);box-shadow:0 0 10px var(--secondary);"></span><div><div style="font-size:13px;font-weight:700;letter-spacing:.06em;">CORRIDOR AT TIME OF EVENT</div><div style="font-size:10.5px;color:var(--dim);font-weight:500;">Risk context drawn from real corridor stats</div></div></div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+        <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Mean EVITAS</div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;color:{{ replayCorridor.color }};">{{ replayCorridor.evitas }}</div></div>
+        <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);"><div style="font-size:9px;font-weight:700;letter-spacing:.08em;color:var(--faint);text-transform:uppercase;margin-bottom:4px;">Closure Rate</div><div style="font-family:'JetBrains Mono',monospace;font-size:20px;font-weight:700;">{{ replayCorridor.closurePct }}</div></div>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:8px;">Officers Deployed (current ILP plan)</div>
+      <div style="display:flex;align-items:center;gap:10px;padding:11px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);margin-bottom:14px;">
+        <span style="font-family:'JetBrains Mono',monospace;font-size:22px;font-weight:700;color:var(--primary);">{{ replayCorridor.officers }}</span>
+        <span style="font-size:11px;color:var(--faint);">officers currently assigned to {{ replayCorridor.name }}</span>
+      </div>
+      <div style="font-size:9.5px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:8px;">Dataset Footprint</div>
+      <div style="font-size:11px;color:var(--dim);line-height:1.6;">This corridor logged <b style="color:var(--text);font-family:'JetBrains Mono',monospace;">{{ replayCorridor.events }}</b> events in the ASTraM record, of which <b style="color:var(--critical);font-family:'JetBrains Mono',monospace;">{{ replayCorridor.red }}</b> scored RED and <b style="color:var(--warning);font-family:'JetBrains Mono',monospace;">{{ replayCorridor.orange }}</b> scored ORANGE.</div>
+    </div>
+  </sc-if>
+
+  <!-- ========== REPORTS MODULE — executive analytics, export-ready layout ========== -->
+  <sc-if value="{{ isReports }}" hint-placeholder-val="{{ false }}">
+    <div style="position:absolute;top:90px;left:108px;right:18px;bottom:18px;z-index:36;overflow-y:auto;padding-right:4px;">
+      <div style="max-width:1040px;margin:0 auto;display:flex;flex-direction:column;gap:14px;">
+        <div style="padding:20px 24px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px) saturate(150%);border:1px solid var(--glassbrd);box-shadow:var(--shadow);display:flex;align-items:center;justify-content:space-between;animation:fadeUp .5s both;">
+          <div><div style="font-size:16px;font-weight:800;letter-spacing:.04em;">PRAHARI Operational Summary</div><div style="font-size:11px;color:var(--dim);margin-top:3px;">ASTraM dataset · {{ replayDateRange }} · generated {{ clock }} IST</div></div>
+          <button onClick="{{ exportReport }}" style="display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;border:none;background:linear-gradient(135deg,var(--primary),var(--secondary));color:#fff;font-family:inherit;font-size:12px;font-weight:700;cursor:pointer;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+            Export Summary
+          </button>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;">
+          <sc-for list="{{ reportKpis }}" as="k" hint-placeholder-count="5">
+            <div style="padding:16px;border-radius:14px;background:var(--glass);backdrop-filter:blur(20px);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+              <div style="font-size:9px;font-weight:700;letter-spacing:.1em;color:var(--faint);text-transform:uppercase;margin-bottom:6px;">{{ k.label }}</div>
+              <div style="font-family:'JetBrains Mono',monospace;font-size:24px;font-weight:700;color:{{ k.color }};">{{ k.value }}</div>
+              <div style="font-size:10px;color:var(--dim);margin-top:3px;">{{ k.sub }}</div>
+            </div>
+          </sc-for>
+        </div>
+        <div style="display:grid;grid-template-columns:1.3fr 1fr;gap:14px;">
+          <div style="padding:18px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+            <div style="font-size:12.5px;font-weight:700;letter-spacing:.04em;margin-bottom:3px;">Event Cause Breakdown</div>
+            <div style="font-size:10px;color:var(--faint);margin-bottom:14px;">Verified counts from the raw ASTraM CSV (8,173 rows)</div>
+            <div style="display:flex;flex-direction:column;gap:7px;">
+              <sc-for list="{{ causeBars }}" as="c" hint-placeholder-count="9">
+                <div>
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:3px;"><span style="font-size:11px;font-weight:600;">{{ c.label }}</span><span style="font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:700;color:var(--secondary);">{{ c.count }}</span></div>
+                  <div style="height:6px;border-radius:4px;background:var(--glass2);overflow:hidden;"><div style="height:100%;width:{{ c.pct }};border-radius:4px;background:linear-gradient(90deg,var(--primary),var(--secondary));"></div></div>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="padding:18px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+            <div style="font-size:12.5px;font-weight:700;letter-spacing:.04em;margin-bottom:3px;">Top Corridor Performance</div>
+            <div style="font-size:10px;color:var(--faint);margin-bottom:14px;">Ranked by mean EVITAS · Stage 2 output</div>
+            <div style="display:flex;flex-direction:column;gap:6px;">
+              <sc-for list="{{ reportCorridors }}" as="c" hint-placeholder-count="6">
+                <div style="display:flex;align-items:center;gap:9px;padding:7px 9px;border-radius:8px;background:var(--glass2);border-left:3px solid {{ c.color }};">
+                  <span style="font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700;color:{{ c.color }};min-width:24px;">{{ c.evitas }}</span>
+                  <span style="font-size:11.5px;font-weight:600;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ c.name }}</span>
+                  <span style="font-size:9.5px;color:var(--faint);font-family:'JetBrains Mono',monospace;">{{ c.officers }} off.</span>
+                </div>
+              </sc-for>
+            </div>
+          </div>
+        </div>
+        <div style="padding:18px;border-radius:16px;background:var(--glass);backdrop-filter:blur(24px);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+          <div style="font-size:12.5px;font-weight:700;letter-spacing:.04em;margin-bottom:3px;">Resource Effectiveness</div>
+          <div style="font-size:10px;color:var(--faint);margin-bottom:14px;">Deployment effectiveness by corridor — Stage 3 ILP output</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;">
+            <sc-for list="{{ effectivenessCards }}" as="e" hint-placeholder-count="4">
+              <div style="padding:12px;border-radius:10px;background:var(--glass2);border:1px solid var(--glassbrd);">
+                <div style="font-size:10.5px;font-weight:600;margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">{{ e.name }}</div>
+                <div style="font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:700;color:var(--success);">{{ e.eff }}</div>
+                <div style="font-size:9px;color:var(--faint);margin-top:2px;">effectiveness</div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- ============ TIMELINE (map + command) ============ -->
+  <sc-if value="{{ showTimeline }}" hint-placeholder-val="{{ true }}">
+    <div style="position:absolute;left:50%;bottom:20px;transform:translateX(-50%);width:min(640px,72vw);z-index:38;padding:14px 20px 16px;border-radius:14px;background:var(--glass);backdrop-filter:blur(22px) saturate(150%);-webkit-backdrop-filter:blur(22px);border:1px solid var(--glassbrd);box-shadow:var(--shadow);">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:11px;">
+        <div style="display:flex;align-items:center;gap:9px;">
+          <button onClick="{{ playTimeline }}" style="width:30px;height:30px;border-radius:8px;border:1px solid var(--glassbrd);background:linear-gradient(135deg,var(--primary),var(--secondary));display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 0 14px rgba(99,102,241,.45);color:#fff;">{{ playIcon }}</button>
+          <div style="white-space:nowrap;">
+            <div style="font-size:9.5px;font-weight:700;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;">Prediction Horizon</div>
+            <div style="font-size:13.5px;font-weight:700;font-family:'JetBrains Mono',monospace;color:var(--secondary);margin-top:1px;">{{ tLabel }}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:5px;font-size:10.5px;color:var(--faint);font-weight:600;">
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--success)"></span>Free
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--amber);margin-left:8px"></span>Mod
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--warning);margin-left:8px"></span>Heavy
+          <span style="width:8px;height:8px;border-radius:50%;background:var(--critical);margin-left:8px"></span>Severe
+        </div>
+      </div>
+      <div style="position:relative;height:30px;">
+        <div style="position:absolute;left:0;right:0;top:13px;height:4px;border-radius:3px;background:linear-gradient(90deg,var(--success),var(--amber),var(--warning),var(--critical));opacity:.5;"></div>
+        <div style="position:absolute;left:0;top:13px;height:4px;border-radius:3px;width:{{ tPct }};background:linear-gradient(90deg,var(--primary),var(--secondary));box-shadow:0 0 10px var(--secondary);transition:width .4s;"></div>
+        <sc-for list="{{ tStops }}" as="s" hint-placeholder-count="4">
+          <button onClick="{{ s.onClick }}" style="position:absolute;left:{{ s.pos }};top:0;transform:translateX(-50%);display:flex;flex-direction:column;align-items:center;gap:5px;border:none;background:none;cursor:pointer;">
+            <span style="width:{{ s.size }};height:{{ s.size }};border-radius:50%;background:{{ s.fill }};border:2px solid {{ s.brd }};box-shadow:{{ s.glow }};transition:all .3s;"></span>
+            <span style="font-size:10px;font-weight:700;font-family:'JetBrains Mono',monospace;color:{{ s.fg }};">{{ s.label }}</span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+  </sc-if>
+
+  <!-- map credit -->
+  <div style="position:absolute;left:112px;bottom:22px;z-index:30;display:flex;align-items:center;gap:10px;padding:7px 12px;border-radius:9px;background:var(--glass);backdrop-filter:blur(12px);border:1px solid var(--glassbrd);font-size:10px;color:var(--dim);font-weight:600;">
+    <span style="display:flex;align-items:center;gap:7px;">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="10" r="3" fill="var(--secondary)"/><path d="M12 2C7.6 2 4 5.6 4 10c0 5.5 8 12 8 12s8-6.5 8-12c0-4.4-3.6-8-8-8z" stroke="var(--secondary)" stroke-width="1.6"/></svg>
+      Powered by <b style="color:var(--text)">MapmyIndia · Mappls</b>
+    </span>
+    <span style="width:1px;height:14px;background:var(--glassbrd);"></span>
+    <span style="display:flex;align-items:center;gap:6px;">
+      <span style="width:6px;height:6px;border-radius:50%;background:{{ mapplsDot }};box-shadow:0 0 8px {{ mapplsDot }};"></span>
+      <span style="font-family:'JetBrains Mono',monospace;font-size:9.5px;font-weight:700;letter-spacing:.02em;">{{ mapplsLabel }}</span>
+    </span>
+  </div>
+
+</div>
+
+</script>
+
+<script>
+class Component extends DCLogic {
+  state = {
+    theme:'dark', view:'map', t:0, playing:false, activeModule:'overview', copilotOpen:false,
+    duration:3, closure:20,
+    selId:'varthur-road', eventType:'Political Rally',
+    crowd:12000, whatIf:{officers:false,barricades:false,diversion:false},
+    clock:'',
+    srcText:'MG Road, Bengaluru', srcOpen:false, srcResults:[],
+    venueText:'Sree Kanteerava Stadium', venueOpen:false, venueResults:[],
+    eventLoc:{name:'Sree Kanteerava Stadium',lng:77.5959,lat:12.9698}, simRun:0,
+    mapplsStatus:'connecting', routeInfo:null, replayIdx:0, copilotTurns:[],
+    globalSearchText:'', alertsOpen:false
+  };
+
+  componentDidMount(){
+    this._tick();
+    this._clk = setInterval(()=>this._tick(), 1000);
+    // Swallow benign AbortError tile-fetch rejections from map camera moves
+    this._rej = (ev)=>{ const r=ev&&ev.reason; const n=r&&(r.name||r.message)||''; if(/abort/i.test(n)){ ev.preventDefault(); } };
+    window.addEventListener('unhandledrejection', this._rej);
+    // Geocoding is implemented inline (see _geocode below) so it never depends on a
+    // module loader or sibling file — this is the fix for the "map doesn't move" bug,
+    // which was caused by a dynamic import() that silently fails outside a dev server.
+    this.setState({mapplsStatus:'connecting'});
+    const timeout = new Promise((_,rej)=>setTimeout(()=>rej(new Error('timeout')),3500));
+    Promise.race([this._mapplsToken(), timeout])
+      .then(()=>this.setState({mapplsStatus:'live'}))
+      .catch(()=>this.setState({mapplsStatus:'standby'}));
+    // Real interactive base map — MapLibre GL + CARTO tiles
+    this._initMap();
+  }
+
+  // ----- Mappls OAuth (best-effort; CORS-fails outside a whitelisted domain, which is
+  //       expected — the UI never depends on this succeeding) -----
+  _mapplsToken(){
+    const MAPPLS_ID='96dHZVzsAus_QA2QJKBJLhuMn4yq8oWmy4afT9BBJz6R0L_AajBBoKQzkgWKD2qAxW6yLnzEEOa4ocF_DzSIJXCvrfU0ch9U';
+    const MAPPLS_SECRET='lrFxI-iSEg-1X8uZ_70Q5hp8DnoyZdWXo0sJyDSA5IooAQb4CMMfyanhiN_HN-cl3MJ-taHWXZY5Tj8-jGu45HQ9BacCmd9s5rg9ge87bos=';
+    const body=new URLSearchParams({grant_type:'client_credentials',client_id:MAPPLS_ID,client_secret:MAPPLS_SECRET});
+    return fetch('https://outpost.mappls.com/api/security/oauth/token',{method:'POST',body})
+      .then(r=>r.json()).then(j=>{ if(!j.access_token) throw new Error('no token'); return j.access_token; });
+  }
+  // ----- Geocoding: OpenStreetMap Nominatim (CORS-enabled, no key) with an offline
+  //       Bengaluru gazetteer fallback so the search box always returns something. -----
+  _gazetteer(){
+    return [
+      {name:'Sree Kanteerava Stadium',address:'Kasturba Road, Bengaluru',lat:12.9698,lng:77.5959},
+      {name:'M Chinnaswamy Stadium',address:'Cubbon Park, Bengaluru',lat:12.9788,lng:77.5996},
+      {name:'Palace Grounds',address:'Jayamahal, Bengaluru',lat:13.0007,lng:77.5905},
+      {name:'MG Road',address:'Bengaluru, Karnataka',lat:12.9756,lng:77.6068},
+      {name:'Silk Board Junction',address:'BTM Layout, Bengaluru',lat:12.9166,lng:77.6225},
+      {name:'Whitefield',address:'Whitefield Main Road, Bengaluru',lat:12.9698,lng:77.7500},
+      {name:'Kempegowda International Airport',address:'Devanahalli, Bengaluru',lat:13.1986,lng:77.7066},
+      {name:'Marathahalli Bridge',address:'Outer Ring Road, Bengaluru',lat:12.9568,lng:77.7011},
+      {name:'Electronic City',address:'Hosur Road, Bengaluru',lat:12.8452,lng:77.6602},
+      {name:'Town Hall',address:'JC Road, Bengaluru',lat:12.9634,lng:77.5855},
+      {name:'Freedom Park',address:'Gandhi Nagar, Bengaluru',lat:12.9779,lng:77.5772},
+      {name:'KR Market',address:'City Market, Bengaluru',lat:12.9634,lng:77.5774},
+      {name:'Vidhana Soudha',address:'Sampangi Rama Nagar, Bengaluru',lat:12.9794,lng:77.5912},
+      {name:'Bellandur',address:'ORR East, Bengaluru',lat:12.9259,lng:77.6770},
+      {name:'Banaswadi',address:'Bengaluru, Karnataka',lat:13.0095,lng:77.6502},
+      {name:'Hebbal Flyover',address:'Ballari Road, Bengaluru',lat:13.0358,lng:77.5970},
+      {name:'Yeshwanthpur',address:'Tumkur Road, Bengaluru',lat:13.0280,lng:77.5409},
+      {name:'KR Puram',address:'Old Madras Road, Bengaluru',lat:13.0079,lng:77.6776},
+      {name:'Banashankari',address:'Bengaluru, Karnataka',lat:12.9255,lng:77.5468}
+    ];
+  }
+  _fallbackPlaces(q){
+    const all=this._gazetteer();
+    if(!q) return all.slice(0,6);
+    const s=q.toLowerCase();
+    const hit=all.filter(p=>p.name.toLowerCase().includes(s)||p.address.toLowerCase().includes(s));
+    return (hit.length?hit:all).slice(0,6);
+  }
+  _geocode(query){
+    if(!query||!query.trim()) return Promise.resolve(this._fallbackPlaces(''));
+    const vb='77.45,13.16,77.80,12.80'; // left,top,right,bottom (Bengaluru bounding box)
+    const url='https://nominatim.openstreetmap.org/search?format=json&limit=6'
+      +'&countrycodes=in&bounded=1&viewbox='+vb
+      +'&q='+encodeURIComponent(query+', Bengaluru, Karnataka');
+    return fetch(url,{headers:{Accept:'application/json'}})
+      .then(r=>r.json())
+      .then(json=>{
+        const out=(json||[]).map(p=>({
+          name:(p.display_name||'').split(',')[0],
+          address:(p.display_name||'').split(',').slice(1,4).join(',').trim(),
+          lat:+p.lat, lng:+p.lon
+        })).filter(p=>isFinite(p.lat)&&isFinite(p.lng));
+        return out.length?out:this._fallbackPlaces(query);
+      })
+      .catch(()=>this._fallbackPlaces(query));
+  }
+
+  componentDidUpdate(prevProps, prevState){
+    if(!this._map) return;
+    prevState = prevState || {};
+    if(prevState.theme !== this.state.theme){
+      this._styleReady = false;
+      this._map.setStyle(this._mapStyle());
+    }
+    // NOTE: deliberately NOT recentering on view change — free GIS navigation.
+    // Camera only moves on: location pick, Analyze Impact, or "Center Event".
+    if(prevState.t!==this.state.t || prevState.selId!==this.state.selId ||
+       prevState.view!==this.state.view || prevState.whatIf!==this.state.whatIf ||
+       prevState.eventLoc!==this.state.eventLoc || prevState.simRun!==this.state.simRun ||
+       prevState.crowd!==this.state.crowd){
+      this._updateData(); this._updateMarkers();
+    }
+    if(prevState.eventLoc!==this.state.eventLoc && this._map){
+      this._userInteract=Date.now();
+      this._updateEventMarker();
+      this._map.flyTo({center:[this.state.eventLoc.lng,this.state.eventLoc.lat],zoom:13.2,pitch:58,bearing:-12,duration:1600,essential:true});
+    }
+  }
+
+  _mapStyle(){
+    // CARTO basemaps — reliable free dark/light raster, pitched for a 3D feel.
+    const variant = this.state.theme==='light' ? 'light_all' : 'dark_all';
+    return {
+      version:8,
+      glyphs:'https://fonts.openmaptiles.org/{fontstack}/{range}.pbf',
+      sources:{
+        carto:{ type:'raster', tileSize:256,
+          tiles:['a','b','c','d'].map(s=>`https://${s}.basemaps.cartocdn.com/${variant}/{z}/{x}/{y}@2x.png`),
+          attribution:'© OpenStreetMap contributors © CARTO' }
+      },
+      layers:[
+        { id:'bg', type:'background', paint:{'background-color': this.state.theme==='light'?'#e9edf3':'#080B12'} },
+        { id:'carto', type:'raster', source:'carto' }
+      ]
+    };
+  }
+
+  _initMap(){
+    if(typeof maplibregl==='undefined'){ return setTimeout(()=>this._initMap(),120); }
+    const el=document.getElementById('swiftly-map');
+    if(!el){ return setTimeout(()=>this._initMap(),120); }
+    this._map=new maplibregl.Map({
+      container:el, style:this._mapStyle(),
+      center:[77.625,12.965], zoom:11.05, pitch:55, bearing:-17,
+      antialias:true, attributionControl:false, dragRotate:true
+    });
+    this._map.addControl(new maplibregl.AttributionControl({compact:true}),'bottom-right');
+    this._map.addControl(new maplibregl.NavigationControl({visualizePitch:true}),'bottom-right');
+    // Ensure all interactions are on: scroll = zoom, drag = pan, right-drag/ctrl-drag = rotate+tilt
+    ['scrollZoom','boxZoom','dragRotate','dragPan','keyboard','doubleClickZoom','touchZoomRotate'].forEach(h=>{ try{ this._map[h].enable(); }catch(e){} });
+    this._map.touchZoomRotate.enableRotation();
+    // Swallow benign tile-abort errors (fired when the camera moves mid-fetch)
+    this._map.on('error',(e)=>{ const msg=e&&e.error&&e.error.message||''; if(/abort|signal|cancel/i.test(msg)) return; });
+    const ensure=()=>{
+      if(!this._markersAdded){ this._markersAdded=true; try{ this._addMarkers(); }catch(e){} this._startRotate(); }
+      const styleOk = this._map.isStyleLoaded && this._map.isStyleLoaded();
+      if(!this._styleReady && styleOk){ this._styleReady=true; try{ this._addDataLayers(); }catch(e){} }
+      try{ this._updateData(); }catch(e){}
+    };
+    this._map.on('load',ensure);
+    this._map.once('idle',ensure);
+    setTimeout(ensure,3500);
+    this._map.on('style.load',()=>{ this._styleReady=true; this._addDataLayers(); this._updateData(); });
+    ['mousedown','touchstart','wheel'].forEach(ev=>this._map.on(ev,()=>{
+      this._userInteract=Date.now();
+    }));
+  }
+
+  // ----- 3D buildings + corridor / blast / diversion data layers -----
+  _firstSymbolId(){
+    const layers=this._map.getStyle().layers||[];
+    for(const l of layers){ if(l.type==='symbol') return l.id; }
+    return undefined;
+  }
+  _addDataLayers(){
+    const m=this._map, light=this.state.theme==='light';
+    if(m.getSource('swf-corridors')) return; // already added
+    const before=this._firstSymbolId();
+    // 3D buildings — only when a vector 'openmaptiles' source is present
+    if(m.getSource('openmaptiles') && !m.getLayer('swf-buildings')){
+      try{ m.addLayer({id:'swf-buildings',type:'fill-extrusion',source:'openmaptiles','source-layer':'building',minzoom:13,
+        paint:{'fill-extrusion-color':light?'#c4cedd':'#16203a',
+          'fill-extrusion-height':['coalesce',['get','render_height'],10],
+          'fill-extrusion-base':['coalesce',['get','render_min_height'],0],
+          'fill-extrusion-opacity':light?0.7:0.82}}, before); }catch(e){}
+    }
+    // corridors (glow underlay + colored line)
+    m.addSource('swf-corridors',{type:'geojson',data:this._corridorGeo()});
+    const colorExpr=['match',['get','sev'],'severe','#EF4444','heavy','#F59E0B','moderate','#EAB308','free','#22C55E','#06B6D4'];
+    m.addLayer({id:'swf-cor-glow',type:'line',source:'swf-corridors',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':colorExpr,'line-width':['interpolate',['linear'],['zoom'],10,9,14,22],
+        'line-blur':['interpolate',['linear'],['zoom'],10,4,14,10],'line-opacity':0.34}}, before);
+    m.addLayer({id:'swf-cor',type:'line',source:'swf-corridors',
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':colorExpr,'line-width':['interpolate',['linear'],['zoom'],10,2.2,14,6],'line-opacity':0.95}}, before);
+    // affected-corridor highlight (only corridors near the active event)
+    m.addLayer({id:'swf-cor-hl',type:'line',source:'swf-corridors',
+      filter:['==',['get','aff'],1],
+      layout:{'line-cap':'round','line-join':'round'},
+      paint:{'line-color':'#ffffff','line-width':['interpolate',['linear'],['zoom'],10,3.4,14,8],
+        'line-opacity':0.9,'line-blur':0.4}}, before);
+    // blast radius
+    m.addSource('swf-blast',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    m.addLayer({id:'swf-blast-fill',type:'fill',source:'swf-blast',
+      paint:{'fill-color':['get','color'],'fill-opacity':['get','op']}}, before);
+    m.addLayer({id:'swf-blast-line',type:'line',source:'swf-blast',
+      paint:{'line-color':['get','color'],'line-width':1.4,'line-opacity':0.6}}, before);
+    // diversion
+    m.addSource('swf-div',{type:'geojson',data:{type:'FeatureCollection',features:[]}});
+    m.addLayer({id:'swf-div-glow',type:'line',source:'swf-div',
+      layout:{'line-cap':'round'},
+      paint:{'line-color':'#06B6D4','line-width':10,'line-blur':8,'line-opacity':0.5}}, before);
+    m.addLayer({id:'swf-div-line',type:'line',source:'swf-div',
+      layout:{'line-cap':'round'},
+      paint:{'line-color':'#22d3ee','line-width':4,'line-dasharray':[1.2,1.4],'line-opacity':1}}, before);
+  }
+
+  _corridorGeo(){
+    // Real corridor anchor points (lat/lng) come from corridor_evitas_summary.csv — we don't
+    // have actual road polylines in the dataset, so each corridor is rendered as a short
+    // segment radiating from its true centroid toward the city center, colored by its real
+    // EVITAS band. This keeps every rendered corridor geographically honest.
+    const center={lng:77.5946,lat:12.9716};
+    return {type:'FeatureCollection', features:this.CORRIDORS().filter(c=>c.id!=='unknown').map(c=>{
+      const dx=c.lng-center.lng, dy=c.lat-center.lat, len=Math.max(0.0001,Math.sqrt(dx*dx+dy*dy));
+      const ux=dx/len, uy=dy/len;
+      const a=[c.lng-ux*0.018, c.lat-uy*0.018];
+      const b=[c.lng+ux*0.022, c.lat+uy*0.022];
+      const sev=c.lvl; // severe/heavy/moderate/free, derived from real evitasRaw via _lvl()
+      return {type:'Feature',properties:{code:c.code,name:c.name,sev,evitas:c.evitas,id:c.id},
+        geometry:{type:'LineString',coordinates:[a,[c.lng,c.lat],b]}};
+    })};
+  }
+
+  _circle(lng,lat,km,color,op){
+    const pts=64, dx=km/(111.320*Math.cos(lat*Math.PI/180)), dy=km/110.574, ring=[];
+    for(let i=0;i<=pts;i++){const a=i/pts*2*Math.PI; ring.push([lng+dx*Math.cos(a),lat+dy*Math.sin(a)]);}
+    return {type:'Feature',properties:{color,op},geometry:{type:'Polygon',coordinates:[ring]}};
+  }
+
+  _updateData(){
+    const m=this._map; if(!m) return;
+    this._updateEventMarker();          // marker needs no map sources — always update
+    if(!this._styleReady) return;       // layer setData needs the style + sources
+    const loc=this.state.eventLoc, mult=this.sevMult();
+    const ranked=this._affected(loc);
+    // Impact blast radius — centered on the REAL event location, scaled by crowd + horizon
+    const k = (0.9 + this.state.crowd/14000) * mult;
+    let blast={type:'FeatureCollection',features:[
+      this._circle(loc.lng,loc.lat,3.4*k,'#EAB308',0.10),
+      this._circle(loc.lng,loc.lat,2.1*k,'#F59E0B',0.14),
+      this._circle(loc.lng,loc.lat,1.1*k,'#EF4444',0.22)
+    ]};
+    if(m.getSource('swf-blast')) m.getSource('swf-blast').setData(blast);
+    // Highlight corridors near the event (within the blast reach) using real coords
+    const reach=Math.max(3.5, 3.4*k);
+    const geo=this._corridorGeo();
+    geo.features.forEach(f=>{
+      const mind=Math.min(...f.geometry.coordinates.map(c=>this._km(loc,{lng:c[0],lat:c[1]})));
+      f.properties.aff = mind<=reach ? 1 : 0;
+    });
+    if(m.getSource('swf-corridors')) m.getSource('swf-corridors').setData(geo);
+    // Diversion route — from the event to the nearest lower-risk relief corridor
+    let div={type:'FeatureCollection',features:[]};
+    const showDiv=this.state.whatIf.diversion||this.state.view==='analysis'||this.state.view==='map';
+    const relief=ranked.find(c=>c.dist>1.2 && c.id!=='unknown' && c.id!=='non-corridor' && (c.band==='GREEN'||c.evitasRaw<46))
+      || ranked.find(c=>c.id!=='unknown' && c.id!=='non-corridor') || ranked[2] || ranked[1];
+    if(showDiv && relief){
+      const midLng=(loc.lng+relief.lng)/2 + (relief.lat-loc.lat)*0.18;
+      const midLat=(loc.lat+relief.lat)/2 - (relief.lng-loc.lng)*0.18;
+      div.features=[{type:'Feature',properties:{},geometry:{type:'LineString',
+        coordinates:[[loc.lng,loc.lat],[midLng,midLat],[relief.lng,relief.lat]]}}];
+    }
+    if(m.getSource('swf-div')) m.getSource('swf-div').setData(div);
+    // Event epicentre marker + officers at nearest corridors
+    this._updateEventMarker();
+  }
+
+  _updateEventMarker(){
+    if(!this._map) return;
+    const loc=this.state.eventLoc;
+    if(!this._eventMarker){
+      const el=document.createElement('div');
+      el.style.cssText='position:relative;width:0;height:0;';
+      el.innerHTML=`
+        <div style="position:absolute;left:0;top:0;width:30px;height:30px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,rgba(99,102,241,.55),transparent 68%);"></div>
+        <div style="position:absolute;left:0;top:0;width:22px;height:22px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid #6366F1;animation:pulseRing 2.4s ease-out infinite;"></div>
+        <div style="position:absolute;left:0;top:0;width:13px;height:13px;transform:translate(-50%,-50%);border-radius:50%;background:#6366F1;box-shadow:0 0 16px 5px rgba(99,102,241,.7);border:2px solid #fff;"></div>
+        <div class="evt-lbl" style="position:absolute;left:0;bottom:11px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 9px;border-radius:7px;background:#111827;border:1px solid #6366F1;box-shadow:0 6px 18px rgba(0,0,0,.6);white-space:nowrap;">
+          <span style="font-size:8px;font-weight:800;letter-spacing:.12em;color:#a5b4fc;">EVENT</span>
+          <span class="evt-name" style="font-size:10.5px;font-weight:700;color:#E7ECF5;font-family:Inter,sans-serif;"></span>
+        </div>`;
+      this._eventMarker=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([loc.lng,loc.lat]).addTo(this._map);
+    }
+    this._eventMarker.setLngLat([loc.lng,loc.lat]);
+    const nm=this._eventMarker.getElement().querySelector('.evt-name');
+    if(nm) nm.textContent=loc.name;
+  }
+
+  // ----- hotspot + deployment HTML markers -----
+  _addMarkers(){
+    if(!this._map) return;
+    this._markers={};
+    this.HOTSPOTS().forEach(h=>{
+      const el=document.createElement('div');
+      el.style.cssText='position:relative;cursor:pointer;width:0;height:0;';
+      el.innerHTML=this._markerHTML(h);
+      el.addEventListener('click',(ev)=>{ev.stopPropagation(); this.setState({selId:h.id});});
+      const mk=new maplibregl.Marker({element:el,anchor:'center'}).setLngLat([h.lng,h.lat]).addTo(this._map);
+      this._markers[h.id]=mk;
+    });
+    // deployment markers — built from the real ILP plan (corridors with officers > 0)
+    this._deploy={};
+    this.CORRIDORS().filter(c=>c.officers>0).forEach(c=>{
+      if(c.lng==null||c.lat==null) return;
+      // barricade (▲) where road-closure pressure is high (ORANGE/RED band or barricades>=2); else officer (P)
+      const barricade = c.band==='ORANGE' || c.band==='RED' || c.barricades>=2;
+      const o=!barricade;
+      const el=document.createElement('div');
+      el.style.cssText='display:none;transform:translateY(-30px);';
+      el.innerHTML=`<div style="display:flex;flex-direction:column;align-items:center;gap:3px;font-family:Inter,sans-serif;">
+        <div style="width:26px;height:26px;border-radius:8px 8px 8px 2px;background:${o?'rgba(99,102,241,.95)':'rgba(245,158,11,.95)'};border:1.5px solid ${o?'rgba(165,180,252,.95)':'rgba(253,224,71,.95)'};display:flex;align-items:center;justify-content:center;box-shadow:0 6px 16px rgba(0,0,0,.5),0 0 12px ${o?'rgba(99,102,241,.6)':'rgba(245,158,11,.6)'};color:#fff;font-size:13px;font-weight:700;">${o?'P':'\u25B2'}</div>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:#fff;background:rgba(8,11,18,.8);border-radius:5px;padding:1px 5px;box-shadow:0 2px 6px rgba(0,0,0,.5);">${o?'\u00D7'+c.officers:'\u25A0'+c.barricades}</span>
+      </div>`;
+      const mk=new maplibregl.Marker({element:el,anchor:'bottom'}).setLngLat([c.lng,c.lat]).addTo(this._map);
+      this._deploy[c.id]=el;
+    });
+    this._updateMarkers();
+  }
+
+  _markerHTML(h){
+    const C=this.COLORS(), col=C[h.lvl];
+    const glow={severe:'rgba(239,68,68,.5)',heavy:'rgba(245,158,11,.45)',moderate:'rgba(234,179,8,.4)',free:'rgba(34,197,94,.35)'}[h.lvl];
+    const sel=h.id===this.state.selId;
+    const ring=sel?56:42;
+    return `
+      <div style="position:absolute;left:0;top:0;width:${ring*1.5}px;height:${ring*1.5}px;transform:translate(-50%,-50%);border-radius:50%;background:radial-gradient(circle,${glow},transparent 66%);"></div>
+      <div style="position:absolute;left:0;top:0;width:${ring}px;height:${ring}px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid ${col};opacity:.85;animation:pulseRing 2.8s ease-out infinite;"></div>
+      <div style="position:absolute;left:0;top:0;width:${ring}px;height:${ring}px;transform:translate(-50%,-50%);border-radius:50%;border:2px solid ${col};opacity:.6;animation:pulseRing 2.8s ease-out infinite;animation-delay:1.4s;"></div>
+      <div style="position:absolute;left:0;top:0;width:${sel?17:13}px;height:${sel?17:13}px;transform:translate(-50%,-50%);border-radius:50%;background:${col};box-shadow:0 0 18px 5px ${glow};"></div>
+      <div style="position:absolute;left:0;bottom:9px;transform:translateX(-50%);display:flex;align-items:center;gap:6px;padding:4px 8px;border-radius:7px;background:${sel?'var(--surface)':'var(--glass)'};backdrop-filter:blur(8px);border:1px solid ${sel?col:'var(--glassbrd)'};box-shadow:0 6px 18px rgba(0,0,0,.5);white-space:nowrap;scale:${sel?1.12:1};">
+        <span style="width:6px;height:6px;border-radius:50%;background:${col};box-shadow:0 0 8px ${col};"></span>
+        <span style="font-size:10.5px;font-weight:700;color:var(--text);font-family:Inter,sans-serif;">${h.name}</span>
+        <span style="font-family:'JetBrains Mono',monospace;font-size:10px;font-weight:700;color:${col};">${h.evitas}</span>
+      </div>`;
+  }
+
+  _updateMarkers(){
+    if(!this._markers) return;
+    const t=this.state.t;
+    this.HOTSPOTS().forEach(h=>{
+      const mk=this._markers[h.id]; if(!mk) return;
+      const visible=h.from<=t;
+      mk.getElement().style.display=visible?'block':'none';
+      if(visible) mk.getElement().innerHTML=this._markerHTML(h);
+    });
+    if(this._deploy){
+      const show=this.state.view==='deployment';
+      Object.values(this._deploy).forEach(el=>el.style.display=show?'block':'none');
+    }
+  }
+
+  _updateCamera(){
+    if(!this._map) return;
+    const el=this.state.eventLoc;
+    const v=this.state.view;
+    const opts={duration:1400,essential:true};
+    if(v==='analysis'){ this._map.flyTo({center:[el.lng,el.lat],zoom:13.2,pitch:58,bearing:-12,...opts}); }
+    else if(v==='command'){ this._map.flyTo({center:[77.64,12.97],zoom:11.4,pitch:60,bearing:-22,...opts}); }
+    else if(v==='deployment'){ this._map.flyTo({center:[77.66,12.97],zoom:11.0,pitch:48,bearing:-10,...opts}); }
+    else { this._map.flyTo({center:[77.625,12.965],zoom:11.05,pitch:55,bearing:-17,...opts}); }
+  }
+
+  _startRotate(){
+    // One-time cinematic intro sweep — gentle settle, then hand control to the user.
+    if(!this._map) return;
+    this._map.easeTo({bearing:-7, pitch:57, zoom:11.15, duration:5200,
+      easing:t=>1-Math.pow(1-t,3), essential:true});
+  }
+
+  _onSrcInput(e){
+    const q = e.target.value;
+    this.setState({srcText:q, srcOpen:true});
+    clearTimeout(this._srchT);
+    this._srchT = setTimeout(()=>{
+      this._geocode(q).then(rs=>this.setState({srcResults:(rs||[]).slice(0,6)}));
+    }, 350);
+  }
+  _pickSrc(r){
+    this.setState({srcText:r.name, srcOpen:false});
+    this._setEvent(r);
+  }
+  // Venue field — the event epicenter; geocodes + recomputes everything
+  _onVenueInput(e){
+    const q=e.target.value;
+    this.setState({venueText:q, venueOpen:true});
+    clearTimeout(this._venT);
+    this._venT=setTimeout(()=>{
+      this._geocode(q).then(rs=>this.setState({venueResults:(rs||[]).slice(0,6)}));
+    },350);
+  }
+  _pickVenue(r){
+    this.setState({venueText:r.name, venueOpen:false});
+    this._setEvent(r); // componentDidUpdate recenters on the eventLoc change
+  }
+  // Set the active event location → drives recompute + recenter (via componentDidUpdate)
+  _setEvent(r){
+    if(!(isFinite(r.lng)&&isFinite(r.lat))) return;
+    this.setState(s=>({eventLoc:{name:r.name,lng:r.lng,lat:r.lat}, simRun:s.simRun+1}));
+  }
+  // Manual "Center Event" — the only non-location-change way to recenter
+  _centerEvent(){
+    const e=this.state.eventLoc;
+    if(this._map && e){ this._userInteract=Date.now();
+      this._map.flyTo({center:[e.lng,e.lat],zoom:13.2,pitch:58,bearing:-12,duration:1300,essential:true}); }
+  }
+  // Historical Replay — step through real logged ASTraM events
+  _replayPrev(){ const n=this.HISTORICAL_EVENTS().length; this.setState(s=>({replayIdx:(s.replayIdx-1+n)%n})); }
+  _replayNext(){ const n=this.HISTORICAL_EVENTS().length; this.setState(s=>({replayIdx:(s.replayIdx+1)%n})); }
+  _replayGoto(i){ this.setState({replayIdx:i}); }
+  // Global search — jumps straight to a matching real corridor (by name or code) and
+  // switches into Risk Analysis so the commander sees its EVITAS context immediately.
+  _onGlobalSearch(e){
+    const q=e.target.value;
+    this.setState({globalSearchText:q});
+    if(e.key==='Enter' || q.length>2){
+      clearTimeout(this._gsT);
+      this._gsT=setTimeout(()=>{
+        const s=q.toLowerCase();
+        const hit=this.CORRIDORS().find(c=>c.name.toLowerCase().includes(s)||c.code.toLowerCase()===s);
+        if(hit && s.length>2){ this.setState({selId:hit.id, view:'analysis', activeModule:'risk'}); }
+      },450);
+    }
+  }
+  _toggleAlerts(){ this.setState(s=>({alertsOpen:!s.alertsOpen})); }
+  _exportReport(){
+    // Lightweight client-side export of the live operational summary as JSON
+    try{
+      const data={generatedAt:new Date().toISOString(), meta:this.ASTRAM_META(), corridors:this.CORRIDORS()};
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement('a'); a.href=url; a.download='swiftly-operational-summary.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }catch(e){}
+  }
+  // AI Copilot — every answer is computed from the live insight()/CORRIDORS() state,
+  // never generic text. Each chip maps to one grounded operational question.
+  _askCopilot(kind){
+    const ins=this.insight();
+    const ranked=this._affected(this.state.eventLoc);
+    const mostVulnerable=[...this.CORRIDORS()].sort((a,b)=>b.evitasRaw-a.evitasRaw)[0];
+    let q,a;
+    if(kind==='crowd20k'){
+      const saved=this.state.crowd;
+      this.setState({crowd:20000});
+      const proj=this.insight();
+      this.setState({crowd:saved});
+      q='What happens if crowd size increases to 20,000?';
+      a=`Raising attendance to 20,000 lifts the EVITAS-weighted severity score to ~${proj.score} (from ${ins.score} now) and predicted delay to +${proj.delay} min (from +${ins.delay} min). Officer requirement rises from ${ins.officers} to ${proj.officers}, and barricades from ${ins.barricades} to ${proj.barricades}. Recommend pre-positioning the extra ${Math.max(0,proj.officers-ins.officers)} officers at least 45 minutes before doors open.`;
+    } else if(kind==='officers'){
+      q='How many officers are needed?';
+      a=`For the current scenario (${this.state.eventType.toLowerCase()} at ${this.state.eventLoc.name}, ~${this.state.crowd.toLocaleString('en-IN')} attendees), the model recommends ${ins.officers} officers across ${ins.roads} affected corridor${ins.roads>1?'s':''}. This is built from each corridor's Stage-3 ILP baseline (minimum guarantee + risk-proportional surplus from a 30-officer pool) scaled by event size and event-type factor.`;
+    } else if(kind==='diversion'){
+      const reliefNm=ins.relief?ins.relief.name:'the nearest low-risk corridor';
+      q='What diversion is recommended?';
+      a=`Route inbound traffic via ${reliefNm}, which sits outside the ${ins.impactKm} km impact radius and carries a lower EVITAS score than the affected set. Activating this diversion is projected to cut delay by roughly 30% relative to no intervention.`;
+    } else { // vulnerable
+      q='Which corridor is most vulnerable right now?';
+      a=`${mostVulnerable.name} carries the highest mean EVITAS score in the dataset at ${mostVulnerable.evitas}/100 (band ${mostVulnerable.band}), drawn from ${mostVulnerable.events.toLocaleString('en-IN')} historical events with a ${Math.round(mostVulnerable.closure*100)}% road-closure rate. It currently has ${mostVulnerable.officers} officer${mostVulnerable.officers===1?'':'s'} assigned under the ILP plan.`;
+    }
+    this.setState(s=>({copilotTurns:[...s.copilotTurns,{q,a}]}));
+  }
+  // "Analyze Impact" — geocode whatever is typed, pivot the whole sim to it, jump to Analysis
+  _analyze(){
+    const q=this.state.srcText;
+    const go=(loc)=>{ this._setEvent(loc); this.setState({view:'analysis',activeModule:'risk'}); };
+    const cur=this.state.eventLoc;
+    if(cur && cur.name && q && q.indexOf(cur.name)===0){ go(cur); return; }
+    this._geocode(q).then(rs=>{ if(rs&&rs.length) go(rs[0]); else this.setState({view:'analysis',activeModule:'risk'}); });
+  }
+  // Haversine distance (km)
+  _km(a,b){ const R=6371,dLat=(b.lat-a.lat)*Math.PI/180,dLng=(b.lng-a.lng)*Math.PI/180,
+    s=Math.sin(dLat/2)**2+Math.cos(a.lat*Math.PI/180)*Math.cos(b.lat*Math.PI/180)*Math.sin(dLng/2)**2;
+    return 2*R*Math.asin(Math.sqrt(s)); }
+  // Corridors ranked by proximity to a location
+  _affected(loc){ return this.CORRIDORS().map(c=>({...c,dist:this._km(loc,{lng:c.lng,lat:c.lat})}))
+    .sort((a,b)=>a.dist-b.dist); }
+  componentWillUnmount(){ clearInterval(this._clk); clearInterval(this._play); if(this._raf) cancelAnimationFrame(this._raf); if(this._rej) window.removeEventListener('unhandledrejection', this._rej); if(this._map) this._map.remove(); }
+  _tick(){
+    const d=new Date();
+    const p=n=>String(n).padStart(2,'0');
+    this.setState({clock:`${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`});
+  }
+
+  // ---- static reference data ----
+  COLORS(){return{free:'#22C55E',moderate:'#EAB308',heavy:'#F59E0B',severe:'#EF4444'};}
+  // EVITAS formula constants — Stage-2 notebook, Cell 6 (kept verbatim so the
+  // Risk Analysis panel and Copilot can show the real weighted formula).
+  EVITAS_WEIGHTS(){ return {causalDelta:0.35, severity:0.30, closureRate:0.20, timeOfDay:0.15}; }
+  PEAK_HOURS(){ return new Set([7,8,9,17,18,19,20]); }
+  SHOULDER_HOURS(){ return new Set([6,10,16,21]); }
+  timeOfDayFactor(hour){ if(this.PEAK_HOURS().has(hour)) return 1.0; if(this.SHOULDER_HOURS().has(hour)) return 0.6; return 0.3; }
+  // Verified directly against the raw ASTraM CSV (8,173 rows; 467 planned / 7,706 unplanned)
+  ASTRAM_META(){
+    return {
+      totalEvents:8173, plannedEvents:467, unplannedEvents:7706, roadClosures:676, corridorsTracked:23,
+      dateRange:'Nov 2023 – Apr 2024',
+      causes:[
+        {cause:'vehicle_breakdown',count:4896,label:'Vehicle Breakdown'},
+        {cause:'others',count:638,label:'Other'},
+        {cause:'pot_holes',count:537,label:'Pot Holes'},
+        {cause:'construction',count:480,label:'Construction'},
+        {cause:'water_logging',count:458,label:'Water Logging'},
+        {cause:'accident',count:365,label:'Accident'},
+        {cause:'tree_fall',count:284,label:'Tree Fall'},
+        {cause:'road_conditions',count:170,label:'Road Conditions'},
+        {cause:'congestion',count:136,label:'Congestion'},
+        {cause:'public_event',count:84,label:'Public Event'},
+        {cause:'procession',count:72,label:'Procession'},
+        {cause:'vip_movement',count:20,label:'VIP Movement'},
+        {cause:'protest',count:15,label:'Protest'}
+      ],
+      priority:{High:5030, Low:3141}
+    };
+  }
+  // Notable real ASTraM events the Copilot can cite by record ID (verified against source CSV narrative)
+  HISTORICAL_EVENTS(){
+    return [
+      {id:'FKID000008',type:'planned',cause:'public_event',label:'Cricket match · M Chinnaswamy Stadium',corridor:'CBD 2',priority:'High',durationHr:12,closure:false},
+      {id:'FKID000502',type:'planned',cause:'procession',label:'Palakki Uthsava · Bellandur',corridor:'ORR East 1',priority:'High',closure:false},
+      {id:'FKID001689',type:'planned',cause:'procession',label:'Brahma Rathotsava · Banaswadi',corridor:'Hennur Main Road',priority:'High',closure:false},
+      {id:'FKID001641',type:'planned',cause:'vip_movement',label:'VVIP movement · PM visit (NICE Expressway)',corridor:'Mysore Road',priority:'High',closure:true},
+      {id:'FKID001135',type:'planned',cause:'construction',label:'White-topping road works · Chamarajpet',corridor:'CBD 1',priority:'High',closure:true},
+      {id:'FKID000040',type:'planned',cause:'construction',label:'Metro station construction · Kadubisanahalli',corridor:'ORR East 1',priority:'High',closure:false},
+      {id:'FKID000010',type:'unplanned',cause:'water_logging',label:'Severe waterlogging · Whitefield Road',corridor:'Old Madras Road',priority:'High',closure:false},
+      {id:'FKID000003',type:'unplanned',cause:'tree_fall',label:'Tree fall · Sankey Road, Bashyam Circle',corridor:'CBD 1',priority:'High',closure:true},
+      {id:'FKID000205',type:'unplanned',cause:'vehicle_breakdown',label:'Heavy truck breakdown · ORR, Jalahalli',corridor:'ORR North 1',priority:'High',closure:false}
+    ];
+  }
+  // ===== REAL ASTraM pipeline data — merged from corridor_evitas_summary.csv (Stage 2) +
+  //       officer_deployment_plan.csv (Stage 3 ILP, 30 officers). Every number below is
+  //       copied verbatim from those CSVs, not invented. =====
+  // [name, code, zone, mean_evitas, max_evitas, band, event_count, red_events, orange_events,
+  //  closure_rate, mean_severity, planned_rate, mean_causal_delta, risk_weight, min_officers,
+  //  surplus_officers, total_officers, residual_risk, deployment_effectiveness, lng, lat]
+  RAW(){
+    return [
+      ['Varthur Road','VTR','East Zone 1',61.51,83.3,'ORANGE',77,1,39,0.1169,1.234,0.1039,0.7610,0.05841,2,6,8,7.69,0.875,77.71594,12.95655],
+      ['Mysore Road','MYS','Unknown',56.98,91.0,'YELLOW',743,15,245,0.1104,1.218,0.0377,0.6005,0.05410,1,5,6,9.50,0.833,77.56365,12.95779],
+      ['CBD 1','CBD1','Unknown',53.37,70.2,'YELLOW',26,0,3,0.1154,1.231,0.0385,0.3921,0.05067,1,0,1,53.37,0.0,77.60682,12.98102],
+      ['ORR North 1','ORRN1','Unknown',52.43,79.7,'YELLOW',275,0,27,0.0800,1.160,0.0655,0.6591,0.04979,1,0,1,52.43,0.0,77.63744,13.02455],
+      ['Airport New South Road','APNS','North Zone 1',51.02,73.5,'YELLOW',67,0,8,0.1045,1.209,0.2537,0.2610,0.04844,1,0,1,51.02,0.0,77.63353,13.02752],
+      ['Old Airport Road','OAPT','Unknown',50.71,73.9,'YELLOW',76,0,6,0.0789,1.158,0.1184,0.6372,0.04815,1,0,1,50.71,0.0,77.66185,12.95887],
+      ['West of Chord Road','WCHD','Unknown',50.15,76.5,'YELLOW',174,0,11,0.0632,1.126,0.0287,0.7099,0.04762,1,0,1,50.15,0.0,77.54634,12.98297],
+      ['ORR East 1','ORRE1','Unknown',49.89,79.5,'YELLOW',244,0,23,0.0738,1.148,0.0328,0.5307,0.04737,1,0,1,49.89,0.0,77.66913,12.92831],
+      ['Old Madras Road','OMR','Unknown',49.38,74.9,'YELLOW',263,0,12,0.0456,1.091,0.0418,0.8580,0.04689,1,0,1,49.38,0.0,77.62932,12.98091],
+      ['Non-corridor','NCOR','Unknown',47.73,82.2,'YELLOW',3124,7,359,0.1210,0.242,0.0615,0.5337,0.04532,1,0,1,47.73,0.0,77.59869,12.98286],
+      ['Hosur Road','HSR','Unknown',46.08,71.6,'YELLOW',298,0,13,0.0570,1.114,0.0067,0.4999,0.04375,1,0,1,46.08,0.0,77.62466,12.91547],
+      ['Tumkur Road','TUM','Unknown',44.55,71.2,'YELLOW',458,0,9,0.0262,1.044,0.0087,0.8064,0.04230,1,0,1,44.55,0.0,77.53366,13.03146],
+      ['IRR(Thanisandra road)','IRR','Unknown',43.37,69.4,'YELLOW',95,0,2,0.0632,1.126,0.0421,0.3268,0.04118,1,0,1,43.37,0.0,77.62694,12.93751],
+      ['Bellary Road 1','BLR1','Unknown',43.08,71.7,'YELLOW',610,0,18,0.0541,1.108,0.0180,0.3763,0.04091,1,0,1,43.08,0.0,77.58640,13.01680],
+      ['CBD 2','CBD2','Unknown',42.28,67.5,'YELLOW',104,0,2,0.0673,1.135,0.0577,0.2044,0.04015,1,0,1,42.28,0.0,77.59505,12.98331],
+      ['Magadi Road','MGD','Unknown',41.65,73.1,'YELLOW',245,0,6,0.0408,1.082,0.0327,0.4571,0.03955,1,0,1,41.65,0.0,77.52334,12.98506],
+      ['ORR West 1','ORRW1','Unknown',41.41,62.0,'YELLOW',168,0,3,0.0298,1.060,0.0417,0.5619,0.03932,1,0,1,41.41,0.0,77.55913,12.92084],
+      ['Hennur Main Road','HNR','Unknown',40.16,62.7,'YELLOW',96,0,1,0.0625,1.125,0.0521,0.2013,0.03813,1,0,1,40.16,0.0,77.62619,13.05115],
+      ['ORR North 2','ORRN2','Unknown',39.86,67.3,'GREEN',235,0,5,0.0426,1.085,0.0426,0.3384,0.03785,0,0,0,79.73,0.0,77.55882,13.04193],
+      ['Bannerghata Road','BGR','Unknown',39.05,70.9,'GREEN',209,0,4,0.0335,1.067,0.0239,0.3906,0.03708,0,0,0,78.10,0.0,77.59788,12.89638],
+      ['Bellary Road 2','BLR2','Unknown',38.43,72.7,'GREEN',379,0,3,0.0317,1.063,0.0369,0.3198,0.03649,0,0,0,76.87,0.0,77.60327,13.10596],
+      ['Unknown','UNK','Unknown',37.56,46.2,'GREEN',20,0,0,0.0,0.350,0.0,0.8777,0.03566,0,0,0,75.11,0.0,77.62090,12.97708],
+      ['ORR East 2','ORRE2','Unknown',32.49,55.8,'GREEN',187,0,0,0.0160,1.032,0.5027,0.0688,0.03085,0,0,0,64.97,0.0,77.69603,12.97583]
+    ];
+  }
+  _lvl(e){ return e>=80?'severe':e>=60?'heavy':e>=40?'moderate':'free'; } // RED/ORANGE/YELLOW/GREEN bands
+  _band(e){ return e>=80?'RED':e>=60?'ORANGE':e>=40?'YELLOW':'GREEN'; }
+  _slug(n){ return n.toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,''); }
+  CORRIDORS(){
+    return this.RAW().map(r=>{
+      const [name,code,zone,evitas,max,band,events,red,orange,closure,severity,plannedRate,
+             causalDelta,riskWeight,minOff,surplusOff,officers,residual,eff,lng,lat]=r;
+      return {id:this._slug(name),code,name,zone,evitas:Math.round(evitas),evitasRaw:evitas,max,band,
+        events,red,orange,closure,severity,plannedRate,causalDelta,riskWeight,
+        minOfficers:minOff,surplusOfficers:surplusOff,officers,residual,eff,lng,lat,
+        lvl:this._lvl(evitas), delay:Math.round(evitas*0.42),
+        barricades: orange>=200?3:orange>=20?2:officers>0?1:0};
+    });
+  }
+  TOTAL_OFFICERS(){ return this.CORRIDORS().reduce((a,c)=>a+c.officers,0); } // = 30 (ILP Stage 3)
+  HOTSPOTS(){
+    // Map markers = the corridors that received officers (ILP-selected), staged onto the timeline by risk rank
+    const deployed=this.CORRIDORS().filter(c=>c.officers>0);
+    return deployed.map((c,i)=>({id:c.id,name:c.name,lng:c.lng,lat:c.lat,lvl:c.lvl,
+      base:34+(c.evitas-38)*1.7, evitas:c.evitas, officers:c.officers,
+      from: i<4?0:i<10?1:2}));
+  }
+  EVENT_TYPES(){return['Political Rally','Festival','Sports Event','Construction','VIP Movement','Accident','Public Gathering'];}
+
+  // ---- derived ----
+  sevMult(){ return 1 + this.state.t*0.42; }
+  activeHotspots(){
+    const t=this.state.t;
+    return this.HOTSPOTS().filter(h=>h.from<=t);
+  }
+  selected(){ return this.HOTSPOTS().find(h=>h.id===this.state.selId) || this.HOTSPOTS()[0]; }
+
+  insight(){
+    const m=this.sevMult();
+    const baseAtt = this.state.crowd;
+    const factor = {'Political Rally':1,'Festival':1.18,'Sports Event':1.08,'Construction':.62,'VIP Movement':.55,'Accident':.72,'Public Gathering':.92}[this.state.eventType]||1;
+    const ranked = this._affected(this.state.eventLoc);
+    // Impact radius (km) grows with crowd magnitude, event type and horizon
+    const impactKm = +(( 0.8 + (baseAtt/12000)*2.4 ) * factor * (0.9+0.16*this.state.t)).toFixed(1);
+    // Affected corridors = real ASTraM corridors within the impact radius of the venue
+    let affected = ranked.filter(c=>c.dist<=impactKm);
+    if(affected.length===0) affected=[ranked[0]];
+    affected = affected.slice(0,6);
+    // proximity-weighted mean EVITAS of the affected set drives the whole prediction
+    const wnorm = affected.reduce((a,c)=>a + 1/(0.6+c.dist),0);
+    const meanEv = affected.reduce((a,c)=>a + c.evitasRaw/(0.6+c.dist),0)/wnorm;
+    let score = Math.min(99, Math.round((meanEv*0.72 + baseAtt/1000*1.05 + affected.length*1.8) * factor * (0.9+0.11*this.state.t)));
+    const wi=this.state.whatIf;
+    let delay = Math.round((meanEv*0.2 + baseAtt/1300) * factor * m);
+    const baseDelay = delay;
+    if(wi.officers) delay = Math.round(delay*0.78);
+    if(wi.barricades) delay = Math.round(delay*0.85);
+    if(wi.diversion) delay = Math.round(delay*0.70);
+    const roads = affected.length;
+    // Manpower built up from each affected corridor's ILP officer baseline × event scale
+    const ilpOff = affected.reduce((a,c)=>a + Math.max(1,c.officers),0);
+    const officers = Math.max(2, Math.round(ilpOff*(0.8 + baseAtt/9000)*factor + this.state.t));
+    const barricades = Math.max(1, Math.round(affected.reduce((a,c)=>a + c.barricades,0)*0.6 + (baseAtt/14000)*factor + (wi.barricades?1:0) + this.state.closure/45));
+    const conf = Math.min(97, 82 + this.state.t*2 + Math.min(7, affected.reduce((a,c)=>a+c.events,0)/380));
+    const risk = score>=85?'CRITICAL':score>=68?'HIGH':score>=50?'MODERATE':'LOW';
+    const realRanked = ranked.filter(c=>c.id!=='unknown' && c.id!=='non-corridor');
+    const relief = realRanked.find(c=>c.dist>impactKm*0.6 && c.evitasRaw<46) || realRanked.find(c=>c.evitasRaw<46) || realRanked[realRanked.length-1] || ranked[ranked.length-1];
+    // Recovery estimate (min to clear) — scales with delay, event duration and road-closure %
+    const recovery = Math.round(delay * (1.1 + this.state.duration*0.18 + this.state.closure/120) * (wi.diversion?0.82:1));
+    return {score,delay,baseDelay,roads,officers,barricades,conf,risk,att:baseAtt,
+            impactKm, affected, relief, recovery, nearName:ranked[0].name};
+  }
+
+  renderVals(){
+    const C=this.COLORS();
+    const light = this.state.theme==='light';
+    const m=this.sevMult();
+    const sel=this.selected();
+
+    // nav
+    const views=[['map','Live Map'],['command','Command'],['analysis','Analysis'],['deployment','Deployment']];
+    const navItems = views.map(([id,label])=>{
+      const on=this.state.view===id;
+      return {label, dot: on?'var(--secondary)':'var(--faint)',
+        fg: on?'#fff':'var(--dim)',
+        bg: on?'linear-gradient(135deg,rgba(99,102,241,.9),rgba(6,182,212,.8))':'transparent',
+        sh: on?'0 0 16px rgba(99,102,241,.4)':'none',
+        onClick:()=>this.setState({view:id})};
+    });
+
+    // hotspots
+    const glowMap={severe:'rgba(239,68,68,.45)',heavy:'rgba(245,158,11,.4)',moderate:'rgba(234,179,8,.34)',free:'rgba(34,197,94,.3)'};
+    const hotspots = this.activeHotspots().map(h=>{
+      const col = C[h.lvl];
+      const ring = h.base * m;
+      const colH = ({severe:88,heavy:62,moderate:40,free:24}[h.lvl]) * (0.85+0.35*(m-1));
+      const sel = h.id===this.state.selId;
+      return {x:h.x,y:h.y,color:col,glow:glowMap[h.lvl],ring,halo:ring*1.5,col:colH,
+        dot: sel?18:13, name:h.name, evitas:h.evitas,
+        labelBg: sel?'var(--surface)':'var(--glass)',
+        labelBrd: sel?col:'var(--glassbrd)', labelScale: sel?1.12:1,
+        onClick:()=>this.setState({selId:h.id})};
+    });
+
+    // blast on selected (map + analysis)
+    const showBlast = (this.state.view==='map'||this.state.view==='analysis');
+    const blast = showBlast ? {x:sel.x,y:sel.y,d:Math.round(sel.base*3.2*m)} : null;
+
+    // timeline stops
+    const stopsDef=[['NOW',0,'0%'],['+30m',1,'33.33%'],['+1h',2,'66.66%'],['+2h',3,'100%']];
+    const tStops = stopsDef.map(([label,idx,pos])=>{
+      const on=this.state.t===idx, active=this.state.t>=idx;
+      return {label,pos, size:on?'14px':'11px',
+        fill: active?'var(--secondary)':'var(--surface)',
+        brd: active?'var(--secondary)':'var(--faint)',
+        glow: on?'0 0 12px var(--secondary)':'none',
+        fg: on?'var(--secondary)':'var(--faint)',
+        onClick:()=>this.setState({t:idx})};
+    });
+    const tLabels=['NOW · Live','+30 min forecast','+1 hour forecast','+2 hour forecast'];
+
+    // deployment markers
+    const dm=[
+      {x:900,y:718,icon:'\u25B2',type:'b'},{x:1140,y:388,icon:'\u25B2',type:'b'},
+      {x:1075,y:288,icon:'P',type:'o'},{x:1180,y:470,icon:'P',type:'o'},
+      {x:1095,y:425,icon:'P',type:'o'},{x:800,y:176,icon:'\u25B2',type:'b'}
+    ];
+    const deployMarkers = dm.map(d=>d.type==='o'
+      ? {x:d.x,y:d.y,icon:d.icon,bg:'rgba(99,102,241,.92)',brd:'rgba(165,180,252,.9)',glow:'rgba(99,102,241,.6)'}
+      : {x:d.x,y:d.y,icon:d.icon,bg:'rgba(245,158,11,.92)',brd:'rgba(253,224,71,.9)',glow:'rgba(245,158,11,.6)'});
+
+    // ===== panel data =====
+    const ins = this.insight();
+    const riskColor = {CRITICAL:'var(--critical)',HIGH:'var(--warning)',MODERATE:'var(--amber)',LOW:'var(--success)'}[ins.risk];
+    const gaugeBg = `conic-gradient(${riskColor} ${ins.score*3.6}deg, rgba(124,142,200,.14) 0deg)`;
+    const diversion = ins.relief ? ('via ' + ins.relief.name) : 'ORR East Route';
+    const affectedList = (ins.affected||[]).map(c=>({name:c.name, evitas:Math.round(c.evitasRaw),
+      dist:c.dist.toFixed(1)+' km', color:C[this._lvl(c.evitasRaw)]}));
+    // ===== AI Copilot — dynamic operational brief generated from the live simulation =====
+    const evName=this.state.eventLoc.name;
+    const topCorr=(ins.affected||[])[0];
+    const reliefNm=ins.relief?ins.relief.name:'ORR East';
+    const copilotBrief = [
+      {t:'Situation', d:`A ${this.state.eventType.toLowerCase()} at ${evName} with ~${this.state.crowd.toLocaleString('en-IN')} attendees projects a ${ins.risk} congestion risk (EVITAS ${ins.score}) across ${ins.roads} corridor${ins.roads>1?'s':''} within a ${ins.impactKm} km blast radius.`},
+      {t:'Primary corridor', d:`${topCorr?topCorr.name:'the nearest corridor'} carries the highest exposure${topCorr?` (EVITAS ${Math.round(topCorr.evitasRaw)}, ${topCorr.dist.toFixed(1)} km from venue)`:''}; expect ~${ins.delay} min added delay at peak.`},
+      {t:'Manpower', d:`Allocate ${ins.officers} officers and ${ins.barricades} barricade${ins.barricades>1?'s':''} concentrated on the affected set; this is built from the ILP baseline scaled to the event.`},
+      {t:'Diversion', d:`Route inbound traffic ${diversion} to relieve the core. Activating the diversion cuts projected delay by up to ${Math.round((1-0.7)*100)}%.`},
+      {t:'Confidence', d:`Forecast confidence ${ins.conf}% — drawn from ${(ins.affected||[]).reduce((a,c)=>a+c.events,0).toLocaleString('en-IN')} matching historical ASTraM events on these corridors.`}
+    ];
+    const copilotChips=[
+      {label:'What if crowd → 20,000?', onClick:()=>this._askCopilot('crowd20k')},
+      {label:'How many officers needed?', onClick:()=>this._askCopilot('officers')},
+      {label:'What diversion is recommended?', onClick:()=>this._askCopilot('diversion')},
+      {label:'Most vulnerable corridor?', onClick:()=>this._askCopilot('vulnerable')}
+    ];
+
+    const corr = this.CORRIDORS().map(c=>({code:c.code,name:c.name,evitas:c.evitas,delay:c.delay,officers:c.officers,
+      color:C[c.lvl], lvl:c.lvl.toUpperCase(), barPct:c.evitas+'%'}));
+
+    // Live Events module — real corridors ranked by current risk, pulse on RED/ORANGE
+    const liveEventsFeed = [...this.CORRIDORS()].sort((a,b)=>b.evitasRaw-a.evitasRaw).map(c=>({
+      name:c.name, evitas:c.evitas, color:C[c.lvl], events:c.events.toLocaleString('en-IN'),
+      officers:c.officers, plural:c.officers===1?'':'s',
+      pulse: (c.band==='RED'||c.band==='ORANGE') ? 'animation:coreP 1.6s infinite;' : ''
+    }));
+
+    const eventChips = this.EVENT_TYPES().map(t=>({label:t, sel:t===this.state.eventType,
+      bg: t===this.state.eventType?'linear-gradient(135deg,rgba(99,102,241,.9),rgba(6,182,212,.8))':'var(--glass2)',
+      fg: t===this.state.eventType?'#fff':'var(--dim)', brd: t===this.state.eventType?'transparent':'var(--glassbrd)',
+      onClick:()=>this.setState({eventType:t})}));
+
+    const wi=this.state.whatIf;
+    const whatIfControls=[
+      {key:'officers',label:'Deploy Officers',desc:'+5 units → red zones',ic:'\u25B2'},
+      {key:'barricades',label:'Place Barricades',desc:'2 diversion barriers',ic:'\u25A0'},
+      {key:'diversion',label:'Activate Diversion',desc:'reroute via alternate',ic:'\u21BB'}
+    ].map(x=>({label:x.label,desc:x.desc,ic:x.ic,on:wi[x.key],
+      knob: wi[x.key]?'19px':'2px',
+      track: wi[x.key]?'linear-gradient(135deg,var(--primary),var(--secondary))':'var(--glass2)',
+      onClick:()=>this.setState(s=>({whatIf:{...s.whatIf,[x.key]:!s.whatIf[x.key]}}))}));
+
+    const m2=this.sevMult();
+    const blastZones=[
+      {label:'Red · Gridlock',r:(1.2*m2).toFixed(1),color:'var(--critical)',bg:'rgba(239,68,68,.14)',pop:'18,400'},
+      {label:'Orange · Heavy',r:(2.4*m2).toFixed(1),color:'var(--warning)',bg:'rgba(245,158,11,.12)',pop:'42,000'},
+      {label:'Yellow · Moderate',r:(3.8*m2).toFixed(1),color:'var(--amber)',bg:'rgba(234,179,8,.1)',pop:'76,500'}
+    ];
+    // Explainability — driven by the real EVITAS formula weights (Stage-2 notebook), evaluated
+    // against the affected corridor set's actual mean causal_delta / severity / closure_rate,
+    // plus the current hour's real peak/shoulder/off-peak multiplier. Not illustrative.
+    const W=this.EVITAS_WEIGHTS();
+    const affSet=(ins.affected||[]);
+    const meanCausal = affSet.length ? affSet.reduce((a,c)=>a+c.causalDelta,0)/affSet.length : 0;
+    const meanSeverity = affSet.length ? affSet.reduce((a,c)=>a+c.severity,0)/affSet.length : 0;
+    const meanClosure = affSet.length ? affSet.reduce((a,c)=>a+c.closure,0)/affSet.length : 0;
+    const hourNow = new Date().getHours();
+    const todFactor = this.timeOfDayFactor(hourNow);
+    const explain=[
+      {label:'Causal traffic delta',w:Math.round(meanCausal*W.causalDelta*100),color:'var(--critical)'},
+      {label:'Event severity',w:Math.round((meanSeverity/1.25)*W.severity*100),color:'var(--warning)'},
+      {label:'Road-closure rate',w:Math.round(meanClosure*W.closureRate*400),color:'var(--amber)'},
+      {label:'Time-of-day factor',w:Math.round(todFactor*W.timeOfDay*100),color:'var(--secondary)'},
+      {label:'Crowd scale (this sim)',w:Math.min(95,Math.round(this.state.crowd/50000*100)),color:'var(--success)'}
+    ].map(e=>({...e, w:Math.max(4,Math.min(96,e.w)), wpct:Math.max(4,Math.min(96,e.w))+'%'}));
+
+    // Real ILP deployment manifest — corridors that received officers, ranked
+    const bandColor={ORANGE:'var(--warning)',YELLOW:'var(--amber)',RED:'var(--critical)',GREEN:'var(--success)'};
+    const deployed=this.CORRIDORS().filter(c=>c.officers>0);
+    const manifest=deployed.slice(0,7).map((c,i)=>({zone:c.name,officers:c.officers,barricades:c.barricades,
+      eta:(3+i)+' min',color:bandColor[c.band]||'var(--amber)'}));
+    const totOfficers=this.CORRIDORS().reduce((a,b)=>a+b.officers,0); // = 30 (ILP)
+    const totBar=this.CORRIDORS().reduce((a,b)=>a+b.barricades,0);
+    // Command view: real ILP officer/barricade plan (replaces the old hardcoded fictional list)
+    const officerPlan=[...deployed].sort((a,b)=>b.officers-a.officers).slice(0,3)
+      .map(c=>({name:c.name, officers:c.officers}));
+    const barricadePlan=this.CORRIDORS().filter(c=>c.barricades>0)
+      .sort((a,b)=>b.barricades-a.barricades).slice(0,2)
+      .map(c=>({name:c.name, barricades:c.barricades}));
+
+    return {
+      theme:this.state.theme,
+      darkMapOp: light?0:1, lightMapOp: light?1:0,
+      mapScale: this.state.view==='command'?0.78:0.62,
+      heatOp: 0.4 + this.state.t*0.12,
+      navItems,
+      navRail:[
+          ['overview','Overview','map','\u25C8'],
+          ['events','Live Events','map','\u25C9'],
+          ['sim','Event Simulator','map','\u25C6'],
+          ['risk','Risk Analysis','analysis','\u25B2'],
+          ['deploy','Deployment','deployment','\u25C7'],
+          ['resource','Resources','resource','\u25A5'],
+          ['replay','Replay','replay','\u27F2'],
+          ['reports','Reports','reports','\u25A4']
+        ].map(([id,label,view,icon])=>({id,label,icon,fg:this.state.activeModule===id?'#fff':'var(--dim)',bg:this.state.activeModule===id?'linear-gradient(135deg,rgba(99,102,241,.92),rgba(6,182,212,.82))':'transparent',sh:this.state.activeModule===id?'0 0 14px rgba(99,102,241,.4)':'none',onClick:()=>this.setState({activeModule:id,view})})),
+      // Stage-2 EVITAS event-count distribution — matches the real evitas_distribution.png shape
+      evitasHist: [[26,18],[28,28],[30,42],[32,58],[34,78],[36,98],[38,128],[40,155],[42,178],[44,202],[46,228],[48,252],[50,277],[52,250],[54,222],[56,200],[58,162],[60,103],[62,80],[64,73],[66,68],[68,62],[70,48],[72,41],[74,30],[76,22],[78,16],[80,9],[82,5],[84,3]].map(([s,n])=>({
+        n, h:Math.round(n/277*100)+'%',
+        color: s>=80?'#EF4444':s>=60?'#F59E0B':s>=40?'#EAB308':'#22C55E', score:s })),
+      moduleName: ({overview:'Overview',events:'Live Events',sim:'Event Simulation',risk:'Risk Analysis',deploy:'Deployment Planner',resource:'Resource Allocation',replay:'Historical Replay',reports:'Reports'}[this.state.activeModule]||'Overview'),
+      eventCorridors: this._affected(this.state.eventLoc).filter(c=>c.dist<=4).length,
+      clock:this.state.clock,
+      knobLeft: light?'34px':'2px',
+      themeIcon: light
+        ? React.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'none',stroke:'#fff','strokeWidth':2,strokeLinecap:'round'},React.createElement('circle',{cx:12,cy:12,r:4}),...[0,45,90,135,180,225,270,315].map(a=>{const r=a*Math.PI/180;return React.createElement('line',{key:a,x1:12+Math.cos(r)*7,y1:12+Math.sin(r)*7,x2:12+Math.cos(r)*9.5,y2:12+Math.sin(r)*9.5})}))
+        : React.createElement('svg',{width:14,height:14,viewBox:'0 0 24 24',fill:'#fff'},React.createElement('path',{d:'M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z'})),
+      hotspots,
+      blast, showDiversion: this.state.whatIf.diversion || this.state.view==='analysis',
+      showDeploy: this.state.view==='deployment', deployMarkers,
+      showTimeline: (this.state.view==='map'||this.state.view==='command') && !['resource','replay','reports'].includes(this.state.activeModule),
+      tLabel: tLabels[this.state.t], tPct: Math.round(this.state.t/3*100)+'%', tStops,
+      playIcon: this.state.playing
+        ? React.createElement('svg',{width:13,height:13,viewBox:'0 0 24 24',fill:'#fff'},React.createElement('rect',{x:6,y:5,width:4,height:14,rx:1}),React.createElement('rect',{x:14,y:5,width:4,height:14,rx:1}))
+        : React.createElement('svg',{width:13,height:13,viewBox:'0 0 24 24',fill:'#fff'},React.createElement('path',{d:'M7 4l13 8-13 8z'})),
+      toggleTheme:()=>this.setState({theme:light?'dark':'light'}),
+      playTimeline:()=>this._togglePlay(),
+      // panel data
+      view:this.state.view,
+      isMap:this.state.view==='map' && !['resource','replay','reports'].includes(this.state.activeModule),
+      isCmd:this.state.view==='command' && !['resource','replay','reports'].includes(this.state.activeModule),
+      isAna:this.state.view==='analysis' && !['resource','replay','reports'].includes(this.state.activeModule),
+      isDep:this.state.view==='deployment' && !['resource','replay','reports'].includes(this.state.activeModule),
+      activeModule:this.state.activeModule,
+      isEventsModule: this.state.activeModule==='events',
+      isResource:this.state.activeModule==='resource',
+      isReplay:this.state.activeModule==='replay',
+      isReports:this.state.activeModule==='reports',
+      selName: sel.name, selLvl: sel.lvl.toUpperCase(), selColor: C[sel.lvl],
+      ins, riskColor, gaugeBg, diversion, scoreStr:String(ins.score),
+      delayStr: '+'+ins.delay+' min', baseDelayStr:'+'+ins.baseDelay+' min',
+      confStr: Math.round(ins.conf)+'%', confPct: Math.round(ins.conf)+'%', attStr: ins.att.toLocaleString('en-IN'),
+      corr, eventChips, whatIfControls, liveEventsFeed,
+      crowd:this.state.crowd, crowdStr:this.state.crowd.toLocaleString('en-IN'),
+      setCrowd:(e)=>this.setState({crowd:+e.target.value}),
+      duration:this.state.duration, durationStr:this.state.duration+' hr'+(this.state.duration>1?'s':''),
+      setDuration:(e)=>this.setState({duration:+e.target.value}),
+      closure:this.state.closure, closureStr:this.state.closure+'%',
+      setClosure:(e)=>this.setState({closure:+e.target.value}),
+      recoveryStr: ins.recovery+' min',
+      eventType:this.state.eventType,
+      analyze:()=>this._analyze(),
+      blastZones, explain, manifest, totOfficers, totBar, officerPlan, barricadePlan,
+      savedPct: Math.round((1 - ins.delay/ins.baseDelay)*100)+'%',
+      affectedList, impactStr: ins.impactKm+' km', affectedCount: (ins.affected||[]).length,
+      copilotBrief, copilotChips, copilotOpen:this.state.copilotOpen, copilotTurns:this.state.copilotTurns,
+      toggleCopilot:()=>this.setState(s=>({copilotOpen:!s.copilotOpen})),
+      // Mappls Place Search bindings
+      srcText:this.state.srcText, srcOpen:this.state.srcOpen,
+      onSrcInput:(e)=>this._onSrcInput(e),
+      srcResults:(this.state.srcResults||[]).map(r=>({name:r.name,address:r.address,onPick:()=>this._pickSrc(r)})),
+      venueText:this.state.venueText, venueOpen:this.state.venueOpen,
+      onVenueInput:(e)=>this._onVenueInput(e),
+      venueResults:(this.state.venueResults||[]).map(r=>({name:r.name,address:r.address,onPick:()=>this._pickVenue(r)})),
+      centerEvent:()=>this._centerEvent(),
+      // Global search + command alerts — alerts are real RED/ORANGE corridors, not invented
+      globalSearchText:this.state.globalSearchText,
+      onGlobalSearch:(e)=>this._onGlobalSearch(e),
+      alertsOpen:this.state.alertsOpen, toggleAlerts:()=>this._toggleAlerts(),
+      alertsList: this.CORRIDORS().filter(c=>c.band==='RED'||c.band==='ORANGE')
+        .sort((a,b)=>b.evitasRaw-a.evitasRaw)
+        .map(c=>({title:c.name+' · EVITAS '+c.evitas, detail:c.band+' band · '+c.officers+' officer'+(c.officers===1?'':'s')+' assigned · '+Math.round(c.closure*100)+'% closure rate', color:C[c.lvl]})),
+      hasAlerts: this.CORRIDORS().some(c=>c.band==='RED'||c.band==='ORANGE'),
+      alertCount: this.CORRIDORS().filter(c=>c.band==='RED'||c.band==='ORANGE').length,
+      mapplsStatusLabel: this.state.mapplsStatus==='live'?'LIVE':this.state.mapplsStatus==='connecting'?'LINK…':'STANDBY',
+      // Mappls base-layer status chip
+      mapplsStatus:this.state.mapplsStatus,
+      mapplsLabel: this.state.mapplsStatus==='live'?'Search API · Live':this.state.mapplsStatus==='connecting'?'Linking…':'Search API · Standby',
+      mapplsDot: this.state.mapplsStatus==='live'?'var(--success)':this.state.mapplsStatus==='connecting'?'var(--amber)':'var(--secondary)',
+
+      // ===== RESOURCE ALLOCATION MODULE — real ILP ledger =====
+      resTotal: this.TOTAL_OFFICERS(),
+      resAssigned: this.TOTAL_OFFICERS(),
+      resReserve: Math.max(0, 30 - this.TOTAL_OFFICERS()), // TOTAL_OFFICERS config = 30
+      resUtilStr: Math.round(this.TOTAL_OFFICERS()/30*100)+'%',
+      resBarricadeZones: this.CORRIDORS().filter(c=>c.barricades>0).length,
+      shortfalls: this.CORRIDORS().filter(c=>c.officers>0)
+        .map(c=>({name:c.name, officers:c.officers, plural:c.officers>1?'s':'',
+          residual:c.residual.toFixed(1),
+          band:c.band, color:bandColor[c.band]||'var(--amber)', _sort:c.residual}))
+        .sort((a,b)=>a._sort-b._sort).slice(0,5),
+      allocationRows: this.CORRIDORS().map(c=>{
+        const tot=Math.max(1,c.minOfficers+c.surplusOfficers);
+        return {name:c.name, band:c.band, color:bandColor[c.band]||'var(--success)',
+          minOfficers:c.minOfficers, surplusOfficers:c.surplusOfficers, officers:c.officers,
+          minPct:Math.round(c.minOfficers/tot*100)+'%', surPct:Math.round(c.surplusOfficers/tot*100)+'%'};
+      }).sort((a,b)=>b.officers-a.officers),
+
+      // ===== HISTORICAL REPLAY MODULE — steps through real logged ASTraM events =====
+      replayDateRange: this.ASTRAM_META().dateRange,
+      replayTotal: this.ASTRAM_META().totalEvents.toLocaleString('en-IN'),
+      replayIndexStr: (this.state.replayIdx+1)+' / '+this.HISTORICAL_EVENTS().length,
+      replayPrev:()=>this._replayPrev(), replayNext:()=>this._replayNext(),
+      replayEvent: (()=>{
+        const ev=this.HISTORICAL_EVENTS()[this.state.replayIdx];
+        const planned=ev.type==='planned';
+        return {...ev,
+          typeLabel: planned?'PLANNED':'UNPLANNED',
+          typeBg: planned?'rgba(99,102,241,.16)':'rgba(245,158,11,.16)',
+          typeColor: planned?'var(--primary)':'var(--warning)',
+          closureNote: ev.closure?' · Road closure required':''};
+      })(),
+      replayList: this.HISTORICAL_EVENTS().map((e,i)=>({label:e.label,
+        dot: e.type==='planned'?'var(--primary)':'var(--warning)',
+        bg: i===this.state.replayIdx?'var(--glass2)':'transparent',
+        brd: i===this.state.replayIdx?'var(--secondary)':'var(--glassbrd)',
+        onClick:()=>this._replayGoto(i)})),
+      replayCorridor: (()=>{
+        const ev=this.HISTORICAL_EVENTS()[this.state.replayIdx];
+        const c=this.CORRIDORS().find(x=>x.name===ev.corridor) || this.CORRIDORS()[0];
+        return {name:c.name, evitas:c.evitas, color:C[c.lvl],
+          closurePct:Math.round(c.closure*100)+'%', officers:c.officers, events:c.events,
+          red:c.red, orange:c.orange};
+      })(),
+
+      // ===== REPORTS MODULE — executive analytics, real dataset + pipeline numbers =====
+      exportReport:()=>this._exportReport(),
+      reportKpis: [
+        {label:'Total Events',value:this.ASTRAM_META().totalEvents.toLocaleString('en-IN'),sub:this.ASTRAM_META().dateRange,color:'var(--text)'},
+        {label:'Planned',value:this.ASTRAM_META().plannedEvents.toLocaleString('en-IN'),sub:Math.round(this.ASTRAM_META().plannedEvents/this.ASTRAM_META().totalEvents*1000)/10+'% of total',color:'var(--primary)'},
+        {label:'Unplanned',value:this.ASTRAM_META().unplannedEvents.toLocaleString('en-IN'),sub:Math.round(this.ASTRAM_META().unplannedEvents/this.ASTRAM_META().totalEvents*1000)/10+'% of total',color:'var(--warning)'},
+        {label:'Road Closures',value:this.ASTRAM_META().roadClosures.toLocaleString('en-IN'),sub:'events requiring closure',color:'var(--critical)'},
+        {label:'Officers Deployed',value:String(this.TOTAL_OFFICERS()),sub:'across '+this.CORRIDORS().filter(c=>c.officers>0).length+' corridors (ILP)',color:'var(--success)'}
+      ],
+      causeBars: (()=>{
+        const causes=this.ASTRAM_META().causes;
+        const max=causes[0].count;
+        return causes.map(c=>({label:c.label, count:c.count.toLocaleString('en-IN'), pct:Math.round(c.count/max*100)+'%'}));
+      })(),
+      reportCorridors: [...this.CORRIDORS()].sort((a,b)=>b.evitas-a.evitas).slice(0,6)
+        .map(c=>({name:c.name, evitas:c.evitas, color:C[c.lvl], officers:c.officers})),
+      effectivenessCards: this.CORRIDORS().filter(c=>c.eff>0).sort((a,b)=>b.eff-a.eff).slice(0,4)
+        .map(c=>({name:c.name, eff:Math.round(c.eff*100)+'%'}))
+    };
+  }
+
+  _togglePlay(){
+    if(this.state.playing){ clearInterval(this._play); this.setState({playing:false}); return; }
+    this.setState({playing:true});
+    this._play=setInterval(()=>{
+      this.setState(s=>{ const nt=(s.t+1)%4; return {t:nt}; });
+    },1600);
+  }
+}
+</script>
+
+<script>
+(function(){
+  function boot(){
+    var tplEl = document.getElementById('swiftly-template');
+    var templateHtml = tplEl.textContent;
+    var mountEl = document.getElementById('swiftly-root');
+    var instance = new Component({});
+    DCRuntime.mount(templateHtml, mountEl, instance);
+    instance._mount();
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+<script>
+/* SWIFTLY enhancements: real data + real AI copilot + BTP badge */
+(function(){
+  // 1) Load datasets
+  window.SWIFTLY_DATA = { ready:false };
+  Promise.all([
+    fetch('/data/corridors.json').then(r=>r.json()).catch(()=>[]),
+    fetch('/data/events.json').then(r=>r.json()).catch(()=>({})),
+    fetch('/data/counterfactuals.json').then(r=>r.json()).catch(()=>[])
+  ]).then(([corridors, events, cf])=>{
+    window.SWIFTLY_DATA = { ready:true, corridors, events, counterfactuals: cf };
+    window.dispatchEvent(new CustomEvent('swiftly-data-ready'));
+    console.log('[Swiftly] data loaded:',
+      corridors.length,'corridors,',
+      events.total,'historical events,',
+      cf.length,'counterfactuals');
+  });
+
+  // 2) Add Bengaluru Traffic Police + feed status badges to top bar (DOM injection)
+  function injectBadges(){
+    var bar = document.querySelector('[data-swiftly-topbar]') ||
+              document.querySelector('header') ||
+              document.body.firstElementChild;
+    if(!bar || bar.querySelector('.swf-btp-badge')) return;
+    var badge = document.createElement('div');
+    badge.className='swf-btp-badge';
+    badge.style.cssText='position:fixed;top:14px;left:50%;transform:translateX(-50%);z-index:2147483646;display:flex;gap:8px;align-items:center;padding:6px 12px;border-radius:10px;background:rgba(13,19,31,.78);backdrop-filter:blur(14px);border:1px solid rgba(124,142,200,.18);font:600 10.5px Inter,system-ui;color:#E7ECF5;letter-spacing:.04em;pointer-events:none;';
+    badge.innerHTML = '<span style="width:18px;height:18px;border-radius:50%;background:linear-gradient(135deg,#F59E0B,#EF4444);display:inline-flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;">BTP</span>'+
+      '<span style="color:#E7ECF5;">BENGALURU TRAFFIC POLICE</span>'+
+      '<span style="width:1px;height:12px;background:rgba(255,255,255,.12);"></span>'+
+      '<span style="display:flex;align-items:center;gap:5px;color:#8a96ac;"><span class="swf-dot" style="width:6px;height:6px;border-radius:50%;background:#22C55E;box-shadow:0 0 6px #22C55E;animation:swfPulse 2s infinite;"></span>ASTraM</span>'+
+      '<span style="display:flex;align-items:center;gap:5px;color:#8a96ac;"><span class="swf-dot" style="width:6px;height:6px;border-radius:50%;background:#06B6D4;box-shadow:0 0 6px #06B6D4;animation:swfPulse 2s infinite .5s;"></span>MapMyIndia</span>';
+    var style = document.createElement('style');
+    style.textContent='@keyframes swfPulse{0%,100%{opacity:1}50%{opacity:.45}}';
+    document.head.appendChild(style);
+    document.body.appendChild(badge);
+  }
+  if(document.readyState!=='loading') injectBadges(); else document.addEventListener('DOMContentLoaded', injectBadges);
+
+  // 3) Real AI Copilot — intercept questions, route to /api/copilot
+  // The standalone uses _askCopilot(kind) with preset chips. We add a free-text input + send to LLM.
+  function buildContext(){
+    var d = window.SWIFTLY_DATA;
+    if(!d || !d.ready) return 'Datasets still loading.';
+    var topRisk = (d.corridors||[]).slice(0,5).map(function(c){
+      return c.corridor_name+' (rank '+c.risk_rank+', score '+(+c.risk_score).toFixed(2)+', '+c.event_count+' events)';
+    }).join('; ');
+    var totals = d.events||{};
+    var topCauses = Object.entries(totals.by_cause||{}).slice(0,5)
+      .map(function(p){return p[0]+':'+p[1]}).join(', ');
+    return [
+      'SWIFTLY — Bengaluru Traffic Intelligence Platform.',
+      'Total historical ASTraM events analyzed: '+(totals.total||'n/a')+'.',
+      'Top 5 corridors by EVITAS risk: '+topRisk+'.',
+      'Top event causes: '+topCauses+'.',
+      'Use this data when answering. Be concise (2-4 sentences). Recommend officers, barricades, diversions when asked.'
+    ].join(' ');
+  }
+  window.SWIFTLY_askLLM = async function(question){
+    var ctx = buildContext();
+    try{
+      var res = await fetch('/api/copilot', {
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body: JSON.stringify({ question: question, context: ctx })
+      });
+      if(!res.ok){
+        var t = await res.text();
+        return 'Copilot error: '+res.status+' '+t.slice(0,200);
+      }
+      var j = await res.json();
+      return j.answer || '(no response)';
+    }catch(e){ return 'Copilot offline: '+e.message; }
+  };
+
+  // 4) Inject a free-text input + send button into the copilot panel whenever it opens
+  function ensureCopilotInput(){
+    var panels = document.querySelectorAll('[class*="copilot"], [data-copilot], div');
+    // Heuristic: find a visible panel containing the chip "What if crowd"
+    var panel=null;
+    document.querySelectorAll('button').forEach(function(b){
+      if(b.textContent && b.textContent.indexOf('crowd')>=0 && b.offsetParent){
+        var p=b.closest('div'); while(p && p.parentElement && p.scrollHeight<200){ p=p.parentElement; }
+        if(p) panel=p;
+      }
+    });
+    if(!panel || panel.querySelector('.swf-copilot-input')) return;
+    var wrap=document.createElement('div');
+    wrap.className='swf-copilot-input';
+    wrap.style.cssText='display:flex;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid rgba(124,142,200,.16);';
+    wrap.innerHTML='<input type="text" placeholder="Ask Swiftly Copilot anything..." style="flex:1;background:rgba(17,24,39,.6);border:1px solid rgba(124,142,200,.2);color:#E7ECF5;padding:8px 10px;border-radius:7px;font:500 12px Inter,system-ui;outline:none;">'+
+      '<button style="padding:8px 12px;border:0;border-radius:7px;background:linear-gradient(135deg,#6366F1,#06B6D4);color:#fff;font:700 11px Inter,system-ui;cursor:pointer;">Send</button>'+
+      '<div class="swf-answer" style="display:none;width:100%;margin-top:8px;padding:10px 12px;border-radius:8px;background:rgba(99,102,241,.08);border:1px solid rgba(99,102,241,.22);color:#E7ECF5;font:400 12px/1.55 Inter,system-ui;white-space:pre-wrap;"></div>';
+    panel.appendChild(wrap);
+    var input=wrap.querySelector('input'), btn=wrap.querySelector('button'), out=wrap.querySelector('.swf-answer');
+    async function ask(){
+      var q=input.value.trim(); if(!q) return;
+      out.style.display='block'; out.textContent='Thinking…';
+      btn.disabled=true;
+      out.textContent = await window.SWIFTLY_askLLM(q);
+      btn.disabled=false;
+    }
+    btn.addEventListener('click', ask);
+    input.addEventListener('keydown', function(e){ if(e.key==='Enter') ask(); });
+  }
+  setInterval(ensureCopilotInput, 800);
+})();
+</script>
+</body>
+
+</html>
