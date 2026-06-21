@@ -326,7 +326,7 @@ function SwiftlyShell() {
         <div className="swf-section-head">
           <span className="swf-section-eyebrow">— COUNTERFACTUAL SCENARIO ENGINE</span>
           <h2 className="swf-section-title">Simulate event impact. See EVITAS, delay, recovery & deployment update live.</h2>
-          <p className="swf-section-lede">Drive every parameter directly. Outputs are computed from your inputs and the real ASTraM corridor &amp; counterfactual datasets — not pre-recorded.</p>
+          <p className="swf-section-lede">Drive every parameter directly. Outputs are computed from your inputs, real ASTraM corridor &amp; counterfactual datasets, and Bengaluru Traffic Police historical statistics — not pre-recorded.</p>
         </div>
         <CounterfactualEngine />
       </section>
@@ -571,10 +571,22 @@ function hav(lat1: number, lon1: number, lat2: number, lon2: number) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+type BtpStat = {
+  corridor_name: string;
+  accidents_per_year: number;
+  incidents_per_year: number;
+  congestion_index: number;
+  vehicle_volume_kpd: number;
+  peak_vulnerability: number;
+  peak_windows: string[];
+  source: string;
+};
+
 function CounterfactualEngine() {
   const [corridors, setCorridors] = useState<CorridorFull[]>([]);
   const [cfRows, setCfRows] = useState<CFRow[]>([]);
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [btpStats, setBtpStats] = useState<BtpStat[]>([]);
 
   const [corridorName, setCorridorName] = useState("Varthur Road");
   const [eventType, setEventType] = useState("procession");
@@ -586,17 +598,35 @@ function CounterfactualEngine() {
   useEffect(() => {
     fetch("/data/corridors.json").then((r) => r.json()).then(setCorridors).catch(() => {});
     fetch("/data/counterfactuals.json").then((r) => r.json()).then(setCfRows).catch(() => {});
+    fetch("/data/btp_stats.json").then((r) => r.json()).then(setBtpStats).catch(() => {});
     fetch("/data/events.json")
       .then((r) => r.json())
       .then((d) => setLiveEvents(d.live_sample || []))
       .catch(() => {});
   }, []);
 
+
   const corridor = useMemo(
     () => corridors.find((c) => c.corridor_name === corridorName),
     [corridors, corridorName],
   );
   const eventMeta = EVENT_TYPES.find((e) => e.key === eventType) ?? EVENT_TYPES[0];
+  const btp = useMemo(
+    () => btpStats.find((b) => b.corridor_name === corridorName),
+    [btpStats, corridorName],
+  );
+
+  // ── BTP historical vulnerability uplift (0–14 pts) ───────────────────────
+  // Blends accident frequency, incident density, congestion index and peak vulnerability.
+  const btpUplift = btp
+    ? Math.min(
+        14,
+        (btp.accidents_per_year / 220) * 4 +
+          (btp.incidents_per_year / 320) * 3.5 +
+          (btp.congestion_index / 100) * 3.5 +
+          (btp.peak_vulnerability / 100) * 3,
+      )
+    : 0;
 
   // ── EVITAS contribution model (transparent, explainable) ─────────────────
   const baseRisk = (corridor?.risk_score ?? 0.35) * 100 * 0.55; // corridor history baseline
@@ -604,7 +634,7 @@ function CounterfactualEngine() {
   const durationC = Math.min((duration / 6) * 12, 16);
   const closureC = (closurePct / 100) * 26 * eventMeta.weight;
   const officerMit = -Math.min(officers * 1.9, 28);
-  const rawEvitas = baseRisk + crowdC + durationC + closureC + officerMit;
+  const rawEvitas = baseRisk + btpUplift + crowdC + durationC + closureC + officerMit;
   const evitas = Math.max(0, Math.min(100, Math.round(rawEvitas * 10) / 10));
 
   const band: "green" | "yellow" | "orange" | "red" =
@@ -614,13 +644,16 @@ function CounterfactualEngine() {
   const recoveryMin = Math.round(
     duration * 60 * 0.35 + (closurePct / 100) * 55 + crowd / 700 - officers * 2.5,
   );
+  // BTP peak vulnerability and accident frequency bump manpower needs
+  const btpManpowerBump = btp ? (btp.peak_vulnerability / 100) * 1.6 + (btp.accidents_per_year / 250) : 0;
   const optimalOfficers = Math.max(
     2,
-    Math.ceil(crowd / 2200 + closurePct / 18 + eventMeta.weight * 2.2 + (corridor?.mean_severity ?? 1) * 1.5),
+    Math.ceil(crowd / 2200 + closurePct / 18 + eventMeta.weight * 2.2 + (corridor?.mean_severity ?? 1) * 1.5 + btpManpowerBump),
   );
   const barricades = Math.ceil(optimalOfficers / 3) + (closurePct >= 50 ? 2 : 0);
   const impactRadiusKm =
     Math.round((crowd / 5000 + closurePct / 28 + duration * 0.18) * 10) / 10;
+
 
   // ── Diversion: nearest 2 alternate corridors by lat/lon ──────────────────
   const diversion = useMemo(() => {
@@ -657,11 +690,13 @@ function CounterfactualEngine() {
   // ── Explainability factor breakdown ──────────────────────────────────────
   const factors = [
     { name: "Corridor baseline (ASTraM risk_score)", value: baseRisk, tone: "blue" },
+    { name: "BTP historical vulnerability (accidents, incidents, peak congestion)", value: btpUplift, tone: "blue" },
     { name: `Crowd impact (× ${eventMeta.weight} event weight)`, value: crowdC, tone: "amber" },
     { name: "Event duration", value: durationC, tone: "amber" },
     { name: `Road closure ${closurePct}%`, value: closureC, tone: "red" },
     { name: `Officer mitigation (${officers} officers)`, value: officerMit, tone: "green" },
   ];
+
   const maxAbs = Math.max(...factors.map((f) => Math.abs(f.value)), 1);
 
   // ── What-if presets ──────────────────────────────────────────────────────
@@ -669,6 +704,12 @@ function CounterfactualEngine() {
 
   return (
     <div className="swf-cf">
+      <div className="swf-cf-attrib">
+        <span className="swf-cf-attrib-dot" />
+        Source: <b>ASTraM Event Data + Bengaluru Traffic Police Statistics</b>
+        <span className="swf-cf-attrib-note">BTP stats used as historical risk factors — not real-time feeds.</span>
+      </div>
+
       {/* Controls */}
       <div className="swf-cf-controls">
         <div className="swf-cf-control">
@@ -854,8 +895,55 @@ function CounterfactualEngine() {
             </div>
           )}
         </div>
+
+        <div className="swf-cf-panel">
+          <div className="swf-cf-panel-h">BTP CORRIDOR VULNERABILITY (HISTORICAL)</div>
+          <p className="swf-cf-panel-lede">
+            Bengaluru Traffic Police annual statistics for <b>{corridorName}</b>. Historical risk factors — feeds the EVITAS baseline and manpower sizing, not real-time signals.
+          </p>
+          {!btp ? (
+            <div className="swf-cf-empty">No BTP stats for this corridor.</div>
+          ) : (
+            <>
+              <div className="swf-cf-btp-grid">
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Accidents / yr</div>
+                  <div className="swf-cf-btp-v">{btp.accidents_per_year.toFixed(0)}</div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Incidents / yr</div>
+                  <div className="swf-cf-btp-v">{btp.incidents_per_year.toFixed(0)}</div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Congestion idx</div>
+                  <div className="swf-cf-btp-v">{btp.congestion_index.toFixed(0)}<span className="swf-cf-btp-u">/100</span></div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Volume</div>
+                  <div className="swf-cf-btp-v">{btp.vehicle_volume_kpd.toFixed(0)}<span className="swf-cf-btp-u">k veh/day</span></div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">Peak vulnerability</div>
+                  <div className="swf-cf-btp-v">{btp.peak_vulnerability.toFixed(0)}<span className="swf-cf-btp-u">/100</span></div>
+                </div>
+                <div className="swf-cf-btp-cell">
+                  <div className="swf-cf-btp-l">EVITAS uplift</div>
+                  <div className="swf-cf-btp-v">+{btpUplift.toFixed(1)}</div>
+                </div>
+              </div>
+              <div className="swf-cf-btp-peaks">
+                <span>Peak windows:</span>
+                {btp.peak_windows.map((w) => (
+                  <span key={w} className="swf-cf-btp-chip">{w}</span>
+                ))}
+              </div>
+              <div className="swf-cf-btp-src">Source: Bengaluru Traffic Police · Annual Statistics</div>
+            </>
+          )}
+        </div>
       </div>
     </div>
+
   );
 }
 
@@ -1273,6 +1361,18 @@ const css = `
 .swf-cf-live-addr{font-size:10px;color:#94a8cd;margin-top:1px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .swf-cf-live-pri{font-size:10px;color:#ffb079;font-weight:800;letter-spacing:.8px}
 .swf-cf-empty{padding:14px;text-align:center;color:#94a8cd;font-size:12px}
+.swf-cf-attrib{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;margin-bottom:14px;border:1px solid rgba(79,209,255,.18);background:rgba(79,209,255,.06);border-radius:10px;font-size:11px;letter-spacing:.6px;color:#cfe0f5}
+.swf-cf-attrib b{color:#fff;font-weight:700}
+.swf-cf-attrib-dot{width:8px;height:8px;border-radius:50%;background:#4fd1ff;box-shadow:0 0 10px rgba(79,209,255,.7)}
+.swf-cf-attrib-note{color:#8fa3c6;font-style:italic;margin-left:6px}
+.swf-cf-btp-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:6px}
+.swf-cf-btp-cell{padding:10px;border:1px solid rgba(150,173,220,.18);background:rgba(255,255,255,.02);border-radius:8px}
+.swf-cf-btp-l{font-size:10px;letter-spacing:.8px;color:#8fa3c6;text-transform:uppercase;margin-bottom:4px}
+.swf-cf-btp-v{font-size:18px;font-weight:800;color:#f4f7fb}
+.swf-cf-btp-u{font-size:10px;font-weight:600;color:#8fa3c6;margin-left:4px}
+.swf-cf-btp-peaks{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:12px;font-size:11px;color:#b5c0d7}
+.swf-cf-btp-chip{padding:3px 8px;border-radius:999px;border:1px solid rgba(238,107,37,.3);background:rgba(238,107,37,.08);color:#ffb088;font-weight:700;letter-spacing:.5px}
+.swf-cf-btp-src{margin-top:10px;font-size:10px;color:#7388a8;letter-spacing:.6px}
 .swf-rband-green{background:rgba(46,213,115,.14);color:#69ef9e;border:1px solid rgba(46,213,115,.3)}
 .swf-rband-yellow{background:rgba(255,192,71,.14);color:#ffd37a;border:1px solid rgba(255,192,71,.3)}
 .swf-rband-orange{background:rgba(255,140,66,.16);color:#ffb079;border:1px solid rgba(255,140,66,.3)}
