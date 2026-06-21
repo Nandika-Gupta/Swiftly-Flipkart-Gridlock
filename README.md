@@ -31,6 +31,7 @@
 - [Feature Walkthrough](#feature-walkthrough)
 - [Screenshots](#screenshots)
 - [Datasets](#datasets)
+- [Data Pipeline Notebooks](#data-pipeline-notebooks)
 - [System Architecture](#system-architecture)
 - [Tech Stack](#tech-stack)
 - [Project Structure](#project-structure)
@@ -202,6 +203,30 @@ All data shipped with this repo is **real, not synthetic**. Raw source CSVs live
 | Counterfactual `cate` (causal effect of closure) | Recovery time projections beyond historical envelope |
 
 A transparent, explainable rule engine beats a black-box model trained on 8K sparse rows — that's a deliberate choice.
+
+---
+
+## Data Pipeline Notebooks
+
+The CSVs in `public/data/raw/` are not hand-authored — they are the output of a three-stage Python pipeline shipped in `notebooks/`. Run them top-to-bottom to regenerate every dataset SWIFTLY consumes.
+
+| Stage | Notebook | What it does | Produces |
+|---|---|---|---|
+| **1** | [`notebooks/Stage1_Causal_Inference.ipynb`](notebooks/Stage1_Causal_Inference.ipynb) | Trains a **DR Learner** (EconML) on 8,173 ASTraM events to estimate the *causal* effect of road closure on severity. Outputs per-event CATE with confidence intervals. | `counterfactual_table.csv` |
+| **2** | [`notebooks/Stage2_EVITAS_Score.ipynb`](notebooks/Stage2_EVITAS_Score.ipynb) | Combines `causal_delta` + `severity_score` + corridor `closure_rate` + `time_of_day_factor` into the single **EVITAS 0–100 score** per event, then rolls up to corridor level. | `evitas_scores.csv`, `corridor_evitas_summary.csv` |
+| **3** | [`notebooks/Stage3_ILP_Optimizer.ipynb`](notebooks/Stage3_ILP_Optimizer.ipynb) | **Linear-programming officer allocator** (`scipy.optimize.linprog`). Given N officers available, minimises total weighted residual risk across 23 corridors with min-coverage constraints on RED/ORANGE corridors. | `officer_deployment_plan.csv` |
+
+### Running the notebooks
+
+```bash
+cd notebooks
+pip install pandas numpy scipy scikit-learn lightgbm econml shap jupyter
+jupyter notebook
+```
+
+Run `Stage1 → Stage2 → Stage3` in order. Outputs land next to the notebooks; drop the resulting CSVs into `public/data/raw/` to refresh the app.
+
+
 
 ---
 
