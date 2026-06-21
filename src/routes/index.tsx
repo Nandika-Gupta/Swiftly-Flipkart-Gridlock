@@ -256,13 +256,13 @@ function SwiftlyShell() {
           <h2 className="swf-section-title">Five operational stages. Event detection to deployed response.</h2>
         </div>
         <div className="swf-flow">
-          <FlowNode n="01" title="ASTRaM Event" sub="Ingest" />
+          <FlowNode n="01" title="ASTraM Event" sub="Ingest" />
           <FlowArrow />
-          <FlowNode n="02" title="DR Learner" sub="Counterfactual" />
+          <FlowNode n="02" title="Counterfactual Δ" sub="Historical CATE lookup" />
           <FlowArrow />
           <FlowNode n="03" title="EVITAS Engine" sub="0–100 Score" accent />
           <FlowArrow />
-          <FlowNode n="04" title="ILP Optimizer" sub="Allocate Officers" />
+          <FlowNode n="04" title="Allocator" sub="Rule-based optimizer" />
           <FlowArrow />
           <FlowNode n="05" title="Diversion Plan" sub="Deploy" />
         </div>
