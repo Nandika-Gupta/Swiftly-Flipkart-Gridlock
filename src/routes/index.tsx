@@ -571,10 +571,22 @@ function hav(lat1: number, lon1: number, lat2: number, lon2: number) {
   return 2 * R * Math.asin(Math.sqrt(a));
 }
 
+type BtpStat = {
+  corridor_name: string;
+  accidents_per_year: number;
+  incidents_per_year: number;
+  congestion_index: number;
+  vehicle_volume_kpd: number;
+  peak_vulnerability: number;
+  peak_windows: string[];
+  source: string;
+};
+
 function CounterfactualEngine() {
   const [corridors, setCorridors] = useState<CorridorFull[]>([]);
   const [cfRows, setCfRows] = useState<CFRow[]>([]);
   const [liveEvents, setLiveEvents] = useState<LiveEvent[]>([]);
+  const [btpStats, setBtpStats] = useState<BtpStat[]>([]);
 
   const [corridorName, setCorridorName] = useState("Varthur Road");
   const [eventType, setEventType] = useState("procession");
@@ -586,11 +598,13 @@ function CounterfactualEngine() {
   useEffect(() => {
     fetch("/data/corridors.json").then((r) => r.json()).then(setCorridors).catch(() => {});
     fetch("/data/counterfactuals.json").then((r) => r.json()).then(setCfRows).catch(() => {});
+    fetch("/data/btp_stats.json").then((r) => r.json()).then(setBtpStats).catch(() => {});
     fetch("/data/events.json")
       .then((r) => r.json())
       .then((d) => setLiveEvents(d.live_sample || []))
       .catch(() => {});
   }, []);
+
 
   const corridor = useMemo(
     () => corridors.find((c) => c.corridor_name === corridorName),
