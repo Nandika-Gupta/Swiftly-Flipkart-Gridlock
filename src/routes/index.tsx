@@ -712,14 +712,16 @@ const css = `
 .swf-loader-stat-value{margin-top:6px;font-size:14px;font-weight:800;color:#f4f8fd}
 @keyframes swf-loader-progress{0%{transform:translateX(-8%);width:30%}50%{transform:translateX(90%);width:42%}100%{transform:translateX(-8%);width:30%}}
 
-.swf-entered-topbar{position:fixed;top:16px;left:16px;right:16px;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:20px;background:rgba(7,17,29,.58);border:1px solid rgba(176,187,218,.16);backdrop-filter:blur(18px)}
+.swf-entered-topbar{position:fixed;top:16px;left:96px;right:16px;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:14px 16px;border-radius:20px;background:rgba(7,17,29,.58);border:1px solid rgba(176,187,218,.16);backdrop-filter:blur(18px);pointer-events:none}
+.swf-entered-topbar > *{pointer-events:auto}
 .swf-entered-brand{display:flex;align-items:center;gap:12px}
 .swf-entered-logo{width:40px;height:40px;border-radius:12px;background:linear-gradient(135deg,#ff8c42,#4fd1ff);color:#07111d;font-size:18px}
 .swf-entered-title{font-size:14px;font-weight:850;letter-spacing:2px;color:#f6f9fd}
 .swf-entered-sub{font-size:10px;color:#95a8cc;letter-spacing:1.5px;text-transform:uppercase}
 .swf-entered-right{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
 .swf-return-chip{padding:10px 14px;border-radius:12px;border:1px solid rgba(255,255,255,.12);background:linear-gradient(135deg,rgba(255,140,66,.16),rgba(79,209,255,.12));color:#eef4fa;font-size:11px;font-weight:900;letter-spacing:1.5px;cursor:pointer}
-.swf-entered-bottom{position:fixed;left:16px;right:16px;bottom:16px;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-radius:18px;background:rgba(7,17,29,.52);border:1px solid rgba(176,187,218,.14);backdrop-filter:blur(18px)}
+.swf-entered-bottom{position:fixed;left:96px;right:16px;bottom:16px;z-index:45;display:flex;align-items:center;justify-content:space-between;gap:14px;padding:12px 16px;border-radius:18px;background:rgba(7,17,29,.52);border:1px solid rgba(176,187,218,.14);backdrop-filter:blur(18px);pointer-events:none}
+.swf-entered-bottom > *{pointer-events:auto}
 .swf-entered-bottom-label{font-size:11px;color:#b6c4dd;letter-spacing:1.3px;text-transform:uppercase;font-weight:800}
 .swf-entered-bottom-tabs{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
 .swf-mini-tab{padding:8px 10px;border-radius:999px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.08);color:#ced7e7;font-size:11px;font-weight:700}
