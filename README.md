@@ -13,7 +13,7 @@
 ![Radix UI](https://img.shields.io/badge/Radix_UI-shadcn-161618?style=flat-square)
 ![MapMyIndia](https://img.shields.io/badge/MapMyIndia-Corridors-22c55e?style=flat-square)
 
-![Status](https://img.shields.io/badge/Status-Live%20%26%20Deployed-22c55e?style=flat-square) ![Dataset](https://img.shields.io/badge/Dataset-8%2C173%20events-f59e0b?style=flat-square) ![Corridors](https://img.shields.io/badge/Corridors-23-4fd1ff?style=flat-square) ![Build](https://img.shields.io/badge/Build-Solo%20Hackathon-a855f7?style=flat-square) ![License](https://img.shields.io/badge/License-MIT-22c55e?style=flat-square)
+![Status](https://img.shields.io/badge/Status-Live%20%26%20Deployed-22c55e?style=flat-square) ![Dataset](https://img.shields.io/badge/Dataset-8%2C173%20events-f59e0b?style=flat-square) ![Corridors](https://img.shields.io/badge/Corridors-23-4fd1ff?style=flat-square)
 
 **[Live Demo](https://swiftly-flipkart-gridlock.lovable.app)** · **[Source](#)** · **[Datasets](#datasets)**
 
