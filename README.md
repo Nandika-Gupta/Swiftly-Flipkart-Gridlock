@@ -38,7 +38,6 @@
 - [Getting Started](#getting-started)
 - [Configuration](#configuration)
 - [Design Philosophy](#design-philosophy)
-- [Roadmap](#roadmap)
 - [Acknowledgements](#acknowledgements)
 
 ---
