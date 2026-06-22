@@ -39,7 +39,7 @@
     const a = document.createElement("a");
     a.id = "swf-back-home";
     a.href = "/";
-    a.textContent = "← Back to Home";
+    a.textContent = "◄ EXIT TO MISSION CONTROL";
     a.style.cssText = [
       "position:fixed", "top:12px", "left:12px", "z-index:99999",
       "padding:8px 14px", "border-radius:8px",
