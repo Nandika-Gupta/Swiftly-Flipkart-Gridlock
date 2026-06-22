@@ -22,17 +22,23 @@ export const Route = createFileRoute("/api/copilot")({
             { status: 500 },
           );
         }
-        let body: { question?: string; context?: string };
+        let body: { question?: string; context?: unknown };
         try {
           body = await request.json();
         } catch {
           return Response.json({ answer: "Invalid request body." }, { status: 400 });
         }
-        const question = (body.question || "").trim();
-        const context = (body.context || "").trim();
+        const question = (body.question || "").toString().trim();
+        const context =
+          typeof body.context === "string"
+            ? body.context
+            : body.context != null
+              ? JSON.stringify(body.context).slice(0, 6000)
+              : "";
         if (!question) {
           return Response.json({ answer: "Please ask a question." }, { status: 400 });
         }
+
 
         const gateway = createOpenAICompatible({
           name: "lovable",

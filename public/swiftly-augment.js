@@ -91,4 +91,74 @@
     const json = await res.json();
     return json.text || json.answer || "";
   };
+
+  // Inject a real chat composer into the bundled Copilot side panel.
+  function findCopilotPanel() {
+    const candidates = document.querySelectorAll('div[style*="width:380px"], div[style*="width: 380px"]');
+    for (const el of candidates) {
+      const s = el.getAttribute("style") || "";
+      if (s.includes("top:88px") || s.includes("top: 88px")) {
+        if (s.includes("right:18px") || s.includes("right: 18px")) return el;
+      }
+    }
+    return null;
+  }
+
+  function injectCopilotChat() {
+    const panel = findCopilotPanel();
+    if (!panel) return;
+    if (panel.querySelector(".swf-cop-chat")) return;
+
+    const wrap = document.createElement("div");
+    wrap.className = "swf-cop-chat";
+    wrap.style.cssText = "margin-top:auto;padding:12px;border-top:1px solid rgba(79,209,255,.18);display:flex;flex-direction:column;gap:8px;";
+    wrap.innerHTML = `
+      <div class="swf-cop-log" style="max-height:260px;overflow:auto;display:flex;flex-direction:column;gap:8px;font:12px/1.45 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#cfd9ee;"></div>
+      <div style="display:flex;gap:6px;">
+        <input class="swf-cop-input" placeholder="Ask Copilot…" style="flex:1;padding:8px 10px;border-radius:8px;border:1px solid rgba(79,209,255,.3);background:rgba(7,17,29,.7);color:#e7eefc;font:13px -apple-system,sans-serif;outline:none;" />
+        <button class="swf-cop-send" style="padding:8px 12px;border-radius:8px;border:1px solid rgba(79,209,255,.45);background:rgba(79,209,255,.18);color:#4fd1ff;font:700 12px -apple-system,sans-serif;letter-spacing:.06em;cursor:pointer;">SEND</button>
+      </div>
+    `;
+    panel.appendChild(wrap);
+
+    const log = wrap.querySelector(".swf-cop-log");
+    const input = wrap.querySelector(".swf-cop-input");
+    const send = wrap.querySelector(".swf-cop-send");
+
+    function addMsg(role, text) {
+      const row = document.createElement("div");
+      const isUser = role === "user";
+      row.style.cssText = "padding:8px 10px;border-radius:10px;max-width:92%;white-space:pre-wrap;" + (isUser
+        ? "align-self:flex-end;background:rgba(79,209,255,.16);color:#e8f6ff;border:1px solid rgba(79,209,255,.28);"
+        : "align-self:flex-start;background:rgba(255,255,255,.04);color:#cfd9ee;border:1px solid rgba(255,255,255,.08);");
+      row.textContent = text;
+      log.appendChild(row);
+      log.scrollTop = log.scrollHeight;
+      return row;
+    }
+
+    async function submit() {
+      const q = (input.value || "").trim();
+      if (!q) return;
+      input.value = "";
+      addMsg("user", q);
+      const thinking = addMsg("bot", "Thinking…");
+      send.disabled = true;
+      try {
+        const answer = await window.SWIFTLY_askLLM(q);
+        thinking.textContent = answer || "(no response)";
+      } catch (e) {
+        thinking.textContent = "Copilot error: " + (e && e.message ? e.message : e);
+      } finally {
+        send.disabled = false;
+        input.focus();
+      }
+    }
+
+    send.addEventListener("click", submit);
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  }
+
+  setInterval(injectCopilotChat, 800);
 })();
+
