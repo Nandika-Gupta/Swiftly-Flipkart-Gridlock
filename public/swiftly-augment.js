@@ -33,6 +33,35 @@
     pollAugment();
   }
 
+  // Inject a "Back to Home" button so users can return to the landing page.
+  function injectBackButton() {
+    if (document.getElementById("swf-back-home")) return;
+    const a = document.createElement("a");
+    a.id = "swf-back-home";
+    a.href = "/";
+    a.textContent = "← Back to Home";
+    a.style.cssText = [
+      "position:fixed", "top:12px", "left:12px", "z-index:99999",
+      "padding:8px 14px", "border-radius:8px",
+      "background:rgba(7,17,29,.92)", "color:#4fd1ff",
+      "border:1px solid rgba(79,209,255,.4)",
+      "font:600 12px/1 -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif",
+      "letter-spacing:.08em", "text-transform:uppercase",
+      "text-decoration:none", "cursor:pointer",
+      "box-shadow:0 4px 14px rgba(0,0,0,.4)",
+    ].join(";");
+    a.addEventListener("mouseenter", () => { a.style.background = "rgba(79,209,255,.18)"; });
+    a.addEventListener("mouseleave", () => { a.style.background = "rgba(7,17,29,.92)"; });
+    document.body.appendChild(a);
+  }
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", injectBackButton);
+  } else {
+    injectBackButton();
+  }
+  setInterval(injectBackButton, 1500);
+
+
 
   window.SWIFTLY_DATA = window.SWIFTLY_DATA || {};
   Promise.all([
