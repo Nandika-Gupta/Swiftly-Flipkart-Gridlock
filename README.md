@@ -44,7 +44,7 @@
 
 ## Overview
 
-**SWIFTLY** is a live, deployed traffic command-center for Bengaluru that turns historical incident data into real-time operational intelligence. An operator picks a corridor, cause, crowd scale and closure plan — SWIFTLY instantly returns a full **EVITAS** forecast: severity band, expected delay, recovery time, officer count and a corridor-specific diversion plan, paired with a five-stage response playbook.
+**SWIFTLY** is a live, deployed traffic command-center for Bengaluru that turns historical incident data into real-time operational intelligence. An operator picks a corridor, cause, crowd scale and closure plan - SWIFTLY instantly returns a full **EVITAS** forecast: severity band, expected delay, recovery time, officer count and a corridor-specific diversion plan, paired with a five-stage response playbook.
 
 It is built to feel like software a real control room would use — not a notebook exported to a dashboard.
 
